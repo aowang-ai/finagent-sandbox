@@ -79,7 +79,7 @@ Today: empty = every suite. Evidence: FinTool needs RapidAPI-shaped tools; FINSA
 
 ### 6. Observation: keep LCD, fill `raw` per Env
 
-Do not explode `Observation` into StockBench features + DeepFund `analyst_signals` in v1. Contract: EnvAdapter **must** copy the native payload into `raw` (AMA shim already does). Agents that need dual-agent fields read `raw`. Typed fields stay AMA/FINSABER-shaped (as_of, symbols, prices, news, filings, portfolio, query, tools).
+Do not explode `Observation` into StockBench features + DeepFund `analyst_signals` in the typed contract. EnvAdapter **must** copy the native payload into `raw` (AMA shim already does). Agents that need dual-agent fields read `raw`. Typed fields stay AMA/FINSABER-shaped (as_of, symbols, prices, news, filings, portfolio, query, tools).
 
 ### 7. What not to add
 

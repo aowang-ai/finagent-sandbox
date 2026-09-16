@@ -68,7 +68,7 @@ class LiveTradeBenchEnvAdapter:
             "role": "exam_room",
             "layer": "environment.live_multi_market",
             "task_suite": "live_portfolio_allocation",
-            "wave": "v2",
+            "tier": "optional",
             "required_for_promote": False,
             "module": str(self.module_path),
             "entry": "examples/backtest_demo.py (official offline/replay)",

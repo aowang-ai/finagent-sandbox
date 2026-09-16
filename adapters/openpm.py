@@ -2,7 +2,7 @@
 
 Upstream: https://github.com/aslcai/OpenPM-Bench
 Dataset: https://huggingface.co/datasets/aslcai/OpenPM-Bench
-Preferred over PortBench (GOAL.md v2 lock). Apache-2.0.
+Preferred over PortBench (GOAL.md optional lock). Apache-2.0.
 
 Official surface: `python -m agents.portfolio --provider llm_tiered ...`
 Canonical README window: 2026-03-02 .. 2026-05-01, S&P 500 PIT membership.
@@ -63,7 +63,7 @@ class OpenPmEnvAdapter:
             "role": "exam_room",
             "layer": "environment.portfolio_pit",
             "task_suite": "point_in_time_portfolio + honesty_audit",
-            "wave": "v2",
+            "tier": "optional",
             "required_for_promote": False,
             "module": str(self.module_path),
             "entry": "python -m agents.portfolio --provider llm_tiered",

@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import unittest
 
-from adapters.base import ALL_SUITE_IDS
+from adapters.base import (
+    ALL_SUITE_IDS,
+    OPTIONAL_SUITE_IDS,
+    REQUIRED_SUITE_IDS,
+    suite_tier,
+)
 from adapters.finsaber import FinsaberEnvAdapter
 from adapters.stockbench import StockBenchEnvAdapter
 from sandbox.benches.factory import BenchFactory, ProtocolFactory, SUITE_ALIASES
 from sandbox.benches.wrap import EnvAdapterAsBench
+from sandbox.runtime.run_suites import _resolve_wanted
 
 
 class BenchFactoryTests(unittest.TestCase):
@@ -16,6 +22,18 @@ class BenchFactoryTests(unittest.TestCase):
         self.assertEqual(set(BenchFactory._MAP), set(ALL_SUITE_IDS))
         self.assertEqual(len(BenchFactory._MAP), 11)
         self.assertEqual(set(ProtocolFactory._MAP), set(ALL_SUITE_IDS))
+        self.assertEqual(ALL_SUITE_IDS, REQUIRED_SUITE_IDS + OPTIONAL_SUITE_IDS)
+        self.assertEqual(len(REQUIRED_SUITE_IDS), 5)
+        self.assertEqual(len(OPTIONAL_SUITE_IDS), 6)
+        self.assertTrue(set(REQUIRED_SUITE_IDS).isdisjoint(OPTIONAL_SUITE_IDS))
+
+    def test_suite_tier_and_resolve_wanted(self) -> None:
+        self.assertEqual(suite_tier("ama.multi_market_live"), "required")
+        self.assertEqual(suite_tier("openpm.portfolio_pit"), "optional")
+        self.assertEqual(_resolve_wanted("all"), list(REQUIRED_SUITE_IDS))
+        self.assertEqual(_resolve_wanted("required"), list(REQUIRED_SUITE_IDS))
+        self.assertEqual(_resolve_wanted("optional"), list(OPTIONAL_SUITE_IDS))
+        self.assertEqual(_resolve_wanted("ama"), ["ama.multi_market_live"])
 
     def test_create_wraps_stockbench(self) -> None:
         bench = BenchFactory.create("stockbench.daily_sim")

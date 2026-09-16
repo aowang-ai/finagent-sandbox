@@ -26,9 +26,10 @@ SCHEMA_VERSION = "1.0.0"
 # Admission for schema compatibility; it is not a FINSABER (or any) gate.
 DEFAULT_KERNEL_SUITE_ID = "parallel_scorecard"
 
-# Completeness for promote today is the v1 five. v2 suites are registered
-# and cloneable but optional until a full official-protocol run exists.
-REQUIRED_SUITE_IDS_V1: tuple[str, ...] = (
+# All 11 ids are BenchFactory equals. Completeness / --suites all uses the
+# required five. Optional six skip when deps are missing; they do not HOLD
+# admission.
+REQUIRED_SUITE_IDS: tuple[str, ...] = (
     "ama.multi_market_live",
     "finsaber.long_horizon",
     "stockbench.daily_sim",
@@ -36,7 +37,7 @@ REQUIRED_SUITE_IDS_V1: tuple[str, ...] = (
     "deepfund.fund_arena",
 )
 
-PLANNED_SUITE_IDS_V2: tuple[str, ...] = (
+OPTIONAL_SUITE_IDS: tuple[str, ...] = (
     "investorbench.decision",
     "livetradebench.live",
     "finmcp.tool_mcp",
@@ -45,7 +46,22 @@ PLANNED_SUITE_IDS_V2: tuple[str, ...] = (
     "openpm.portfolio_pit",
 )
 
-ALL_SUITE_IDS: tuple[str, ...] = REQUIRED_SUITE_IDS_V1 + PLANNED_SUITE_IDS_V2
+ALL_SUITE_IDS: tuple[str, ...] = REQUIRED_SUITE_IDS + OPTIONAL_SUITE_IDS
+
+
+class BenchTier(str, Enum):
+    REQUIRED = "required"
+    OPTIONAL = "optional"
+
+
+def suite_tier(suite_id: str) -> str:
+    """required | optional for a registered bench. Unknown ids raise."""
+
+    if suite_id in REQUIRED_SUITE_IDS:
+        return BenchTier.REQUIRED.value
+    if suite_id in OPTIONAL_SUITE_IDS:
+        return BenchTier.OPTIONAL.value
+    raise ValueError(f"unknown suite_id {suite_id!r}")
 
 
 class SuiteStatus(str, Enum):
@@ -232,8 +248,8 @@ class Admission:
 
     decision: str
     kernel: str = DEFAULT_KERNEL_SUITE_ID
-    required_suites: list[str] = field(default_factory=lambda: list(REQUIRED_SUITE_IDS_V1))
-    optional_suites: list[str] = field(default_factory=lambda: list(PLANNED_SUITE_IDS_V2))
+    required_suites: list[str] = field(default_factory=lambda: list(REQUIRED_SUITE_IDS))
+    optional_suites: list[str] = field(default_factory=lambda: list(OPTIONAL_SUITE_IDS))
     rationale: str = ""
 
 
@@ -290,6 +306,7 @@ def evaluate_admission(
     *,
     kernel: str = DEFAULT_KERNEL_SUITE_ID,
     required_suites: Iterable[str] | None = None,
+    optional_suites: Iterable[str] | None = None,
 ) -> Admission:
     """Parallel scorecard. No suite vetoes another (including FINSABER).
 
@@ -299,11 +316,12 @@ def evaluate_admission(
     promote — every required suite produced a score (status pass or fail)
     hold    — a required suite is missing or skipped
     reject  — a required suite errored (engine/data/API could not score it)
+    Optional benches never HOLD or REJECT completeness.
     """
 
-    required = list(required_suites) if required_suites is not None else list(REQUIRED_SUITE_IDS_V1)
+    required = list(required_suites) if required_suites is not None else list(REQUIRED_SUITE_IDS)
+    optional = list(optional_suites) if optional_suites is not None else list(OPTIONAL_SUITE_IDS)
     by_id: dict[str, SuiteResult] = {s.suite_id: s for s in suites}
-    optional = [sid for sid in by_id if sid not in required]
 
     missing_or_skip: list[str] = []
     errored: list[str] = []
@@ -352,9 +370,15 @@ def compose_acceptance_report(
     report_id: str,
     kernel: str = DEFAULT_KERNEL_SUITE_ID,
     required_suites: Iterable[str] | None = None,
+    optional_suites: Iterable[str] | None = None,
     notes: str = "",
 ) -> AcceptanceReport:
-    admission = evaluate_admission(suites, kernel=kernel, required_suites=required_suites)
+    admission = evaluate_admission(
+        suites,
+        kernel=kernel,
+        required_suites=required_suites,
+        optional_suites=optional_suites,
+    )
     protocol_hash = sha256_hex([canonical_protocol_hash(s.protocol) for s in suites])
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     return AcceptanceReport(

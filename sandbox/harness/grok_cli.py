@@ -14,7 +14,7 @@ from sandbox.harness.base import BaseHarness, HarnessCapabilities
 
 
 class GrokCliHarness(BaseHarness):
-    """Registered as 'grok-cli'. Sits every ALL_SUITE_IDS bench (v1 + v2)."""
+    """Registered as 'grok-cli'. Sits every ALL_SUITE_IDS bench (required + optional)."""
 
     def __init__(
         self,

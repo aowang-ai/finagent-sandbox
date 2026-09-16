@@ -7,9 +7,10 @@ are intentionally not wired to live LLM / data runs.
 from .base import (
     ALL_SUITE_IDS,
     DEFAULT_KERNEL_SUITE_ID,
-    PLANNED_SUITE_IDS_V2,
-    REQUIRED_SUITE_IDS_V1,
+    OPTIONAL_SUITE_IDS,
+    REQUIRED_SUITE_IDS,
     SCHEMA_VERSION,
+    BenchTier,
     AcceptanceReport,
     Admission,
     AdmissionDecision,
@@ -29,14 +30,16 @@ from .base import (
     compose_acceptance_report,
     evaluate_admission,
     skipped_suite,
+    suite_tier,
 )
 
 __all__ = [
     "ALL_SUITE_IDS",
     "DEFAULT_KERNEL_SUITE_ID",
-    "PLANNED_SUITE_IDS_V2",
-    "REQUIRED_SUITE_IDS_V1",
+    "OPTIONAL_SUITE_IDS",
+    "REQUIRED_SUITE_IDS",
     "SCHEMA_VERSION",
+    "BenchTier",
     "AcceptanceReport",
     "Admission",
     "AdmissionDecision",
@@ -56,4 +59,5 @@ __all__ = [
     "compose_acceptance_report",
     "evaluate_admission",
     "skipped_suite",
+    "suite_tier",
 ]

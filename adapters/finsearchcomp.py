@@ -66,7 +66,7 @@ class FinSearchCompEnvAdapter:
             "role": "exam_room",
             "layer": "environment.research_search",
             "task_suite": "time_sensitive_financial_search",
-            "wave": "v2",
+            "tier": "optional",
             "required_for_promote": False,
             "module": str(self.module_path),
             "entry": "python finsearchcomp/chat/chat.py + finsearchcomp/eval/eval.py",

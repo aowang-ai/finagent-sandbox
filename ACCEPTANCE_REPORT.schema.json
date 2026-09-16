@@ -185,8 +185,19 @@
             "stockbench.daily_sim",
             "ama.multi_market_live",
             "deepfund.fund_arena",
-            "fintoolbench.tool_compliance"
+            "fintoolbench.tool_compliance",
+            "investorbench.decision",
+            "livetradebench.live",
+            "finmcp.tool_mcp",
+            "vals_finance_agent.research",
+            "finsearchcomp.search",
+            "openpm.portfolio_pit"
           ]
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["required", "optional"],
+          "description": "required = admission completeness set; optional = same factory, skip if deps missing."
         },
         "status": {
           "type": "string",

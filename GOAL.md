@@ -17,7 +17,7 @@ Eval infra that scores **agent harnesses** on authoritative finance benchmarks a
 
 Authoritative agent-oriented finance evals, grouped by capability axis. Full official protocols — not smoke / subset.
 
-### Wired today (v1)
+### Required (admission completeness)
 
 | Axis | Suite | Upstream |
 | --- | --- | --- |
@@ -27,7 +27,7 @@ Authoritative agent-oriented finance evals, grouped by capability axis. Full off
 | Portfolio / fund | DeepFund (`deepfund.fund_arena`) | HKUSTDial/DeepFund · arXiv:2505.11065 |
 | Tools | FinToolBench (`fintoolbench.tool_compliance`) | Double-wk/FinToolBench · arXiv:2603.08262 |
 
-### Must add (v2) — locked
+### Optional (same factory; skip if deps missing) — locked
 
 | Axis | Suite | Why |
 | --- | --- | --- |
@@ -37,11 +37,11 @@ Authoritative agent-oriented finance evals, grouped by capability axis. Full off
 | Research / search | **Finance Agent Benchmark (Vals)** | Expert SEC/research tasks + tools |
 | Research / search | **FinSearchComp** | Time-sensitive financial search / investigation |
 
-### Portfolio / honesty extension (v2) — locked choice
+### Portfolio / honesty extension (optional) — locked choice
 
 | Axis | Suite | Note |
 | --- | --- | --- |
-| Portfolio / PIT | **OpenPM-Bench** (preferred) **or PortBench** | Pick **one** primary; OpenPM preferred next to FINSABER (PIT / audit trail). Do not ship both as required until v3. |
+| Portfolio / PIT | **OpenPM-Bench** (preferred) **or PortBench** | Pick **one** primary; OpenPM preferred next to FINSABER (PIT / audit trail). Do not ship both as required. |
 | Long-horizon honesty | OpenPM optional overlap | If OpenPM is chosen above, it also strengthens the honesty axis; FINSABER remains required. |
 
 ### Optional later (not required for coverage lock)
@@ -53,7 +53,7 @@ Authoritative agent-oriented finance evals, grouped by capability axis. Full off
 | FinBen / FinanceBench / FinQA family | Static knowledge axis only |
 | BizFinBench / CNFinBench / FinGAIA | Greater China / multi-vertical business — if product needs CN |
 
-**Target core set after v2:**  
+**Target core set (required + optional):**  
 `StockBench + InvestorBench + AMA + LiveTradeBench` · `FINSABER (+ OpenPM if chosen)` · `DeepFund + OpenPM|PortBench` · `FinToolBench + FinMCP-Bench` · `Vals Finance Agent + FinSearchComp`.
 
 ## Scoring policy (locked)
@@ -77,7 +77,7 @@ Authoritative agent-oriented finance evals, grouped by capability axis. Full off
 ## Non-goals (for now)
 
 - Inventing new task protocols instead of composing upstream exams
-- Multi-harness comparison runners (Claude Code / Codex / Minara) before v2 suites are wired
+- Multi-harness comparison runners (Claude Code / Codex / Minara) before optional suites are wired
 - Public leaderboard product
 - Shortening suites to “prove the pipe”
 - Single-suite admission veto

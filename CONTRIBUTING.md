@@ -10,7 +10,7 @@ Apache-2.0. We compose community finance benches; we do not reinvent their paper
 PYTHONPATH=. python scripts/run_eval.py --harness grok-cli --dry
 ```
 
-Doctor must stay green for structural checks. Optional v2 clones and venvs are warnings, not failures.
+Doctor must stay green for structural checks. Optional clones and venvs are warnings, not failures.
 
 Copy `.env.example` → `.env` for local keys. **Never commit `.env`, PATs, OIDC blobs, or `~/.grok/auth.json`.**
 
@@ -18,8 +18,7 @@ Copy `.env.example` → `.env` for local keys. **Never commit `.env`, PATs, OIDC
 
 Do **not** rewrite metric values in:
 
-- `reports/GROK_CLI_SCORECARD.md` / `.json`
-- `reports/GROK_CLI_SCORECARD_V2.md` / `.json`
+- `reports/GROK_CLI_SCORECARD.md` / `.json` (one card per harness; required/optional is a per-suite field)
 - legacy flat `artifacts/suite_results/{suite_id}.json`
 
 New dumps go under `artifacts/suite_results/<harness>/`. Non-Grok harnesses never write `grok-cli/`. `--report-only` may recompose a scorecard from dumps; it must not invent suite rows.
@@ -44,7 +43,7 @@ Today only `grok-cli` is registered. Empty Claude Code / Codex / OpenClaw stubs 
 ## Add a bench (`BenchFactory`)
 
 1. Write an `EnvAdapter` in `adapters/` (`suite_id`, `module_dir`, `describe()`, `run(agent, protocol) -> SuiteResult`). Prefer the official upstream CLI; harvest native artifacts. See [`ARCHITECTURE.md`](ARCHITECTURE.md) and [`docs/engineering/GLUE.md`](docs/engineering/GLUE.md).
-2. Add the suite id to `adapters/base.py` (`REQUIRED_SUITE_IDS_V1` or `PLANNED_SUITE_IDS_V2` — do not silently promote a bench into v1 required).
+2. Add the suite id to `adapters/base.py` (`REQUIRED_SUITE_IDS` or `OPTIONAL_SUITE_IDS` — do not silently promote a bench into the required set).
 3. Register in `sandbox/benches/factory.py`:
 
    ```python

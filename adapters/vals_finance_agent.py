@@ -65,7 +65,7 @@ class ValsFinanceAgentEnvAdapter:
             "role": "exam_room",
             "layer": "environment.research_search",
             "task_suite": "sec_research_with_tools",
-            "wave": "v2",
+            "tier": "optional",
             "required_for_promote": False,
             "module": str(self.module_path),
             "entry": "finance-agent --question-file data/public.txt",

@@ -57,7 +57,7 @@ DEEPFUND_TICKERS = ["AAPL", "AXP", "BAC", "KO", "CVX"]
 DEEPFUND_DATE_FROM = "2025-04-01"
 DEEPFUND_DATE_TO = "2025-04-30"
 
-# v2 — README / paper defaults. Adapters skip until a full protocol run is wired.
+# Optional — README / paper defaults. Adapters skip until a full protocol run is wired.
 INVESTORBENCH_UNIVERSE = ["HON", "JNJ", "MSFT", "NFLX", "UVV", "BTC-USD", "ETH-USD"]
 INVESTORBENCH_DATE_FROM = "2020-10-01"
 INVESTORBENCH_DATE_TO = "2021-05-06"

@@ -1,10 +1,10 @@
-# V2 suite status
+# Optional suite status
 
-Locked coverage: [`GOAL.md`](../../GOAL.md). Completeness (`admission.decision`) for the Grok CLI product scorecard still uses the **v1 five** (`REQUIRED_SUITE_IDS_V1`). v2 ids live in `PLANNED_SUITE_IDS_V2` and are scored on `reports/GROK_CLI_SCORECARD_V2.md` only.
+Locked coverage: [`GOAL.md`](../../GOAL.md). Completeness (`admission.decision`) for the Grok CLI product scorecard uses the **required five** (`REQUIRED_SUITE_IDS`). Optional ids live in `OPTIONAL_SUITE_IDS` and appear on the same `reports/GROK_CLI_SCORECARD.*` with `tier=optional`. They do not HOLD promote.
 
-Clone with `./scripts/clone_modules.sh`. Doctor **warns** (does not fail) if a v2 module is absent.
+Clone with `./scripts/clone_modules.sh`. Doctor **warns** (does not fail) if an optional module is absent.
 
-v1 five `SuiteResult`s and `reports/GROK_CLI_SCORECARD.*` were **not** rewritten this pass.
+Historical required `SuiteResult`s and `reports/GROK_CLI_SCORECARD.*` metric values were **not** rewritten this pass.
 
 ## 2026-09-14 real-run outcomes (Grok CLI / xAI `grok-4.20-0309-non-reasoning`)
 
@@ -32,7 +32,7 @@ Harvest / resume of official remaining work: `python scripts/v2_suite_ops.py {pr
 
 ## CONTINUE (2026-09-14 evening) — STEER #10 **final** harvest
 
-Prior Grok (STEER #9 PID 2768377) exited while waiting on q045. Vals workers **dead**. **Did not restart** Vals. v1 scorecard + Sep-12 five `SuiteResult`s still untouched.
+Prior Grok (STEER #9 PID 2768377) exited while waiting on q045. Vals workers **dead**. **Did not restart** Vals. Required scorecard + Sep-12 five `SuiteResult`s still untouched.
 
 | suite_id | Continue action | Harvest |
 | --- | --- | --- |
@@ -52,4 +52,4 @@ CONTINUE three targets are finished or honestly blocked. **DONE.**
 - Claude/Codex runners, Herculean, PortBench.
 - Vals official accuracy vs gated 537 (`VALS_API_KEY` + platform GT absent; public.txt 50 reported as completion counts only).
 
-`--suites all` still means the v1 five. `--suites v2` composes `reports/GROK_CLI_SCORECARD_V2.*` and does **not** rewrite `GROK_CLI_SCORECARD.*`.
+`--suites all` (default) is the required five. `--suites optional` runs the optional six. Both land on `reports/GROK_CLI_SCORECARD.*` with a required/optional tier.

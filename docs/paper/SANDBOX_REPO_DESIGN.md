@@ -88,7 +88,7 @@ What already looks like Harbor, what is Grok glue, what the three dynamics still
 | Piece | File | Why it is not a sandbox |
 | --- | --- | --- |
 | `GrokRunner.complete_json`, OIDC refresh, `LOCKED_SYSTEM`, `DECISION_SCHEMA` | `runners/grok.py` | Model loop + auth |
-| `GrokCliAgentAdapter` (`agent_id="grok-cli"`) | `runners/grok.py` L640 | Implements `AgentAdapter`; `capabilities()` lists only v1 five |
+| `GrokCliAgentAdapter` (`agent_id="grok-cli"`) | `runners/grok.py` | Implements `AgentAdapter`; `capabilities()` lists `ALL_SUITE_IDS` |
 | `scripts/run_grok_cli_eval.py` | ADAPTERS/PROTOCOLS dicts, `--suites`, scorecard path policy | Job CLI frozen to one harness |
 | Overlay YAML / xAI `base_url` patches | `adapters/stockbench.py`, `adapters/deepfund.py`, `adapters/v2_runtime.py:xai_env` | LLM backend injection, not exam logic |
 | `GROK_EVAL_BACKEND=api\|cli`, `GROK_EVAL_MODEL` | env | Harness options |
@@ -179,8 +179,8 @@ Two capability systems exist today and must not be conflated:
 
 | System | Where | Meaning today | Meaning after Phase 1 |
 | --- | --- | --- | --- |
-| `AgentAdapter.capabilities() -> set[str]` | `adapters/base.py` L407–409 | **suite ids**; **empty = all**. `GrokCliAgentAdapter` lists the v1 five (`runners/grok.py` L648–655). **Nothing in the runner calls this** (`scripts/run_grok_cli_eval.py` never checks it). | Unchanged on the Protocol (dummy adapters). **Not** the Trial gate. |
-| `BaseHarness.suite_ids() -> set[str]` | new | n/a | **Trial skip gate.** Empty = sit **none** (stubs). Grok lists every suite it will attempt (`ALL_SUITE_IDS`, including v2). |
+| `AgentAdapter.capabilities() -> set[str]` | `adapters/base.py` | **suite ids**; **empty = all**. `GrokCliAgentAdapter` lists `ALL_SUITE_IDS`. **Nothing in the runner calls this** (`scripts/run_grok_cli_eval.py` never checks it). | Unchanged on the Protocol (dummy adapters). **Not** the Trial gate. |
+| `BaseHarness.suite_ids() -> set[str]` | new | n/a | **Trial skip gate.** Empty = sit **none** (stubs). Grok lists every suite it will attempt (`ALL_SUITE_IDS`, including optional). |
 | `BaseHarness.features() -> HarnessCapabilities` | new (Harbor `AgentCapabilities`) | n/a | Runtime flags. **`mcp_servers` is an instance property**, not a ClassVar: Grok API vs CLI is `GROK_EVAL_BACKEND` on one class (`runners/grok.py` L262), unlike Harbor where `GrokBuild` vs `ClaudeCode` are separate classes. |
 
 ```python
@@ -259,7 +259,7 @@ class BaseHarness(ABC):
         """Harbor BaseAgent.preflight analogue: credentials present?"""
 ```
 
-`GrokCliHarness` wraps today’s `GrokRunner` + `GrokCliAgentAdapter`. `name() == "grok-cli"`. `as_agent_adapter()` returns the existing adapter so `EnvAdapter.run(agent, protocol)` does not change in Phase 1. `features().mcp_servers` is True only when `GROK_EVAL_BACKEND=cli`. `suite_ids()` returns `set(ALL_SUITE_IDS)` so v2 still runs (today’s orchestrator ignores `AgentAdapter.capabilities()`).
+`GrokCliHarness` wraps today’s `GrokRunner` + `GrokCliAgentAdapter`. `name() == "grok-cli"`. `as_agent_adapter()` returns the existing adapter so `EnvAdapter.run(agent, protocol)` does not change in Phase 1. `features().mcp_servers` is True only when `GROK_EVAL_BACKEND=cli`. `suite_ids()` returns `set(ALL_SUITE_IDS)` so optional benches still run (today’s orchestrator ignores `AgentAdapter.capabilities()`).
 
 **Phase 1 / 4 must add the skip check** — it does not exist today.
 
@@ -493,7 +493,7 @@ class EnvAdapterAsBench:
         raise NotImplementedError(f"{self.suite_id} has no Harbor-like generate()")
 ```
 
-`BenchFactory` replaces `scripts/run_grok_cli_eval.py:ADAPTERS` (**11** keys: five v1 + six v2). **Same PR moves `PROTOCOLS` and `ALIASES`** into `ProtocolFactory` / `SUITE_ALIASES` so the exam-paper registry does not stay trapped in the Grok script.
+`BenchFactory` replaces `scripts/run_grok_cli_eval.py:ADAPTERS` (**11** keys: five required + six optional). **Same PR moves `PROTOCOLS` and `ALIASES`** into `ProtocolFactory` / `SUITE_ALIASES` so the exam-paper registry does not stay trapped in the Grok script.
 
 Parity sidecar (Harbor `adapter_metadata.json` / `parity_experiment.json`):
 
@@ -627,7 +627,7 @@ class Trial:
 
 Extract `sandbox/runtime/run_suites.py::run_suites(...)` used by **both** CLIs. `scripts/run_eval.py` is the generic entry (`--harness`, `--suites`, `--dry`, `--report-only`). `scripts/run_grok_cli_eval.py` becomes `run_eval.py --harness grok-cli` (keep the filename as a stable alias; argparse flags stay compatible).
 
-v2 composition stays **Grok-only** for `reports/GROK_CLI_SCORECARD_V2.*`. Another harness running v2 writes `{HARNESS}_SCORECARD_V2.*`, never Grok’s V2 file.
+One scorecard per harness. grok-cli writes `reports/GROK_CLI_SCORECARD.*` with a required/optional `tier` per suite. Another harness writes `{HARNESS}_SCORECARD.*`, never Grok’s file.
 
 **Suite JSON namespace** (fixes the clobber hole `dump_suite` at `scripts/run_grok_cli_eval.py` L249–252):
 
@@ -773,7 +773,7 @@ Compose-don’t-rewrite rules from `ARCHITECTURE.md` remain law. Legal modes fro
 | Boundary wrap | FINSABER `on_data`, AMA HTTP, later StockBench `on_bar` | Called at *their* cadence |
 | Artifact compose | DeepFund/StockBench black-box CLI; FinTool JSONL + official evaluator | Called by us, or not at all |
 
-Adding InvestorBench as required still waits on docker/vLLM/Qdrant — we do not invent a non-docker protocol (`V2_SUITE_STATUS.md`).
+Adding InvestorBench as required still waits on docker/vLLM/Qdrant — we do not invent a non-docker protocol (`OPTIONAL_SUITE_STATUS.md`).
 
 ---
 
@@ -820,9 +820,9 @@ We **do** copy: factory maps, `setup`/`run`/`start`/`exec`/`stop`, MCP as harnes
 **Unchanged (do not migrate numbers):**
 
 - `ACCEPTANCE_REPORT.schema.json` `SCHEMA_VERSION = "1.0.0"`
-- `SuiteResult`, `ProtocolSpec`, `Admission`, `REQUIRED_SUITE_IDS_V1`, `PLANNED_SUITE_IDS_V2`
-- `reports/GROK_CLI_SCORECARD.md` + `.json` and `reports/GROK_CLI_SCORECARD_V2.*`
-- `artifacts/suite_results/*.json` (Sep-12 v1 five and later v2)
+- `SuiteResult`, `ProtocolSpec`, `Admission`, `REQUIRED_SUITE_IDS`, `OPTIONAL_SUITE_IDS`
+- `reports/GROK_CLI_SCORECARD.md` + `.json` (one card; optional rows tagged)
+- `artifacts/suite_results/*.json` (Sep-12 required five and later optional)
 
 **Additive:**
 
@@ -886,7 +886,7 @@ Metrics we add as *infra* (not suite metrics): trial duration, harness setup err
 1. **When (if ever) to depend on the `harbor` package?** Phase 5 could generate Vals tasks with Harbor’s own `FinanceAgentAdapter` instead of reinventing `generate_task`. Decision deferred until a Harbor-like task is actually needed.
 2. **Repo rename** — shipped as `aowang-ai/finagent-sandbox` (Apache-2.0). The experimental bed stays a separate private tree.
 3. **Should `AgentAdapter` remain a Protocol forever, or become a method on `BaseHarness` only?** Phase 1 keeps both (`as_agent_adapter`) so `EnvAdapter.run` does not break.
-4. **Docker in CI:** doctor must not require Docker (today it doesn’t). When we add `DockerSandbox`, doctor warns if missing, like v2 modules.
+4. **Docker in CI:** doctor must not require Docker (today it doesn’t). When we add `DockerSandbox`, doctor warns if missing, like optional modules.
 5. **Multi-agent as one harness vs plugin:** custom multi-agent uses `import_path`, not a new suite.
 6. **Network allowlists** on `LocalProcessSandbox` are weak (host process). Honest limitation until Docker. Session `HOME` is still required.
 7. **Should `GrokCliHarness` stay named `grok-cli`** (product) rather than Harbor’s `grok-build`? **Recommend yes — different surface.**

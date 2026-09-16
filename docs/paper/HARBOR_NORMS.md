@@ -340,7 +340,7 @@ Template / wizard also expect `parity_experiment.json` beside `adapter.py`.
 
 1. Prefer official CLI / official judge / official fills (`EnvAdapter.run` today; `BenchAdapter.run_official` in the target design — **our name**).
 2. When we emit Harbor-like tasks, keep `adapter_metadata.json` + a parity note (even if we cannot rerun their LLM backbone).
-3. Honest skip/fail when official protocol cannot run (already the v2 policy in `docs/engineering/V2_SUITE_STATUS.md`). Do not invent a shorter exam to “prove the pipe.”
+3. Honest skip/fail when official protocol cannot run (already the optional-suite policy in `docs/engineering/OPTIONAL_SUITE_STATUS.md`). Do not invent a shorter exam to “prove the pipe.”
 4. Bitwise paper reproduction of LLM backbones is out of scope (`GOAL.md`); **protocol completeness** is in scope — same distinction Harbor’s financeagent README makes versus the gated 537.
 
 ---

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Idempotent shallow clone of v1 + v2 upstream evaluation modules.
+# Idempotent shallow clone of required + optional upstream evaluation modules.
 # Does not fetch HuggingFace parquet, RapidAPI tools, IEX HIST dumps, or LLM weights.
 set -euo pipefail
 
@@ -13,14 +13,14 @@ Usage: scripts/clone_modules.sh [--help]
 
 Idempotent shallow clone of:
 
-  v1
+  required
     stockbench    https://github.com/ChenYXxxx/stockbench
     ama           https://github.com/The-FinAI/Agent_Market_Arena
     deepfund    https://github.com/HKUSTDial/DeepFund
     fintoolbench  https://github.com/Double-wk/FinToolBench
     finsaber      https://github.com/waylonli/FINSABER
 
-  v2
+  optional
     investorbench https://github.com/felis33/INVESTOR-BENCH
     livetradebench https://github.com/ulab-uiuc/live-trade-bench
     finmcp        https://github.com/aliyun/qwen-dianjin  (FinMCP-Bench lives in DianJin-TIR/)
@@ -30,7 +30,7 @@ Idempotent shallow clone of:
 
 into modules/<name>/. Skips a directory that already has a .git or
 non-empty contents (so a local vendor copy is never overwritten).
-A failed clone is a warning, not a hard error (v2 may be private/unavailable).
+A failed clone is a warning, not a hard error (optional clones may be private/unavailable).
 
 Env:
   CLONE_DEPTH   git --depth (default 1)

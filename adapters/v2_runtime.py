@@ -1,8 +1,8 @@
-"""Shared stdlib helpers for v2 EnvAdapters.
+"""Shared stdlib helpers for optional-suite EnvAdapters.
 
 One place for subprocess, xAI env, skip notes, text patches, and JSON
 harvest utilities. Suite-specific resume/harvest lives in `adapters/v2_ops/`.
-Doctor-safe (stdlib + `runners.grok` for key refresh).
+Doctor-safe (stdlib + `runners.grok` for key refresh). Filename is historical.
 """
 
 from __future__ import annotations
@@ -82,7 +82,7 @@ def run_logged(
     append: bool = False,
 ) -> subprocess.CompletedProcess[str]:
     log_path.parent.mkdir(parents=True, exist_ok=True)
-    print(f"[v2] cwd={cwd} cmd={' '.join(cmd)} log={log_path}", flush=True)
+    print(f"[suite] cwd={cwd} cmd={' '.join(cmd)} log={log_path}", flush=True)
     mode = "a" if append else "w"
     with log_path.open(mode, encoding="utf-8") as logf:
         logf.write(f"$ {' '.join(cmd)}\n")
@@ -97,7 +97,7 @@ def run_logged(
             timeout=timeout,
             text=True,
         )
-    print(f"[v2] returncode={proc.returncode} log={log_path}", flush=True)
+    print(f"[suite] returncode={proc.returncode} log={log_path}", flush=True)
     return proc
 
 
@@ -107,7 +107,7 @@ def uv_pip_install(python: str, *pkgs: str) -> int:
         cmd = [uv, "pip", "install", "--python", python, *pkgs]
     else:
         cmd = [python, "-m", "pip", "install", *pkgs]
-    print(f"[v2] {' '.join(cmd)}", flush=True)
+    print(f"[suite] {' '.join(cmd)}", flush=True)
     proc = subprocess.run(cmd, check=False)
     return int(proc.returncode)
 

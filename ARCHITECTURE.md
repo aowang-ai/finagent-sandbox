@@ -64,19 +64,19 @@ No suite silently overrides another. FINSABER fail does **not** veto AMA / Stock
 
 | `suite_id` | Environment | Task suite | Scorecard role |
 | --- | --- | --- | --- |
-| `finsaber.long_horizon` | historical backtest | long-horizon anti-bias | **v1 required** (honesty gates on this suite) |
-| `stockbench.daily_sim` | daily sim | single-name / short-horizon book | **v1 required** |
-| `ama.multi_market_live` | live / paper HTTP | crypto + US names, daily | **v1 required** |
-| `deepfund.fund_arena` | live / paper graph | fund / portfolio + traces | **v1 required** |
-| `fintoolbench.tool_compliance` | tool sandbox | routing + TMR/IMR/DMR | **v1 required** |
-| `investorbench.decision` | cross-asset decision env | stock / crypto / ETF | v2 optional until a full protocol run |
-| `livetradebench.live` | live stocks + Polymarket | 50-day live allocation | v2 optional until a full protocol run |
-| `finmcp.tool_mcp` | MCP tool servers | tool F1 / EMR | v2 optional until a full protocol run |
-| `vals_finance_agent.research` | SEC + web tools | expert research accuracy | v2 optional until a full protocol run |
-| `finsearchcomp.search` | open-domain search | time-sensitive + historical | v2 optional until a full protocol run |
-| `openpm.portfolio_pit` | PIT S&P 500 5m panel | portfolio + contamination cert | v2 optional until a full protocol run |
+| `finsaber.long_horizon` | historical backtest | long-horizon anti-bias | **required** (honesty gates on this suite) |
+| `stockbench.daily_sim` | daily sim | single-name / short-horizon book | **required** |
+| `ama.multi_market_live` | live / paper HTTP | crypto + US names, daily | **required** |
+| `deepfund.fund_arena` | live / paper graph | fund / portfolio + traces | **required** |
+| `fintoolbench.tool_compliance` | tool sandbox | routing + TMR/IMR/DMR | **required** |
+| `investorbench.decision` | cross-asset decision env | stock / crypto / ETF | optional until a full protocol run |
+| `livetradebench.live` | live stocks + Polymarket | 50-day live allocation | optional until a full protocol run |
+| `finmcp.tool_mcp` | MCP tool servers | tool F1 / EMR | optional until a full protocol run |
+| `vals_finance_agent.research` | SEC + web tools | expert research accuracy | optional until a full protocol run |
+| `finsearchcomp.search` | open-domain search | time-sensitive + historical | optional until a full protocol run |
+| `openpm.portfolio_pit` | PIT S&P 500 5m panel | portfolio + contamination cert | optional until a full protocol run |
 
-`REQUIRED_SUITE_IDS_V1` vs `PLANNED_SUITE_IDS_V2` live in `adapters/base.py`. Promote today is the v1 five.
+`REQUIRED_SUITE_IDS` vs `OPTIONAL_SUITE_IDS` live in `adapters/base.py`. Promote today is the required five. All 11 are `BenchFactory` equals.
 
 ## One AgentAdapter, many suites
 
@@ -270,7 +270,7 @@ Signatures are **slots**. This scaffold does not pick a crypto suite; a later st
 
 Module-level wrap plans live as docstrings in `adapters/{stockbench,ama,deepfund,fintoolbench,finsaber}.py`.
 
-v2 layout: `adapters/v2_runtime.py` is the shared subprocess / xAI / skip / patch helper. Each v2 `EnvAdapter` stays protocol → official CLI → `SuiteResult`. Harvest, resume, and upstream patches for FinSearchComp / Vals / LiveTradeBench live in `adapters/v2_ops/`. Operator CLI: `scripts/v2_suite_ops.py` (`progress|harvest|resume`). Main eval entry remains `scripts/run_grok_cli_eval.py`.
+Optional-suite glue: `adapters/v2_runtime.py` is the shared subprocess / xAI / skip / patch helper. Each optional `EnvAdapter` stays protocol → official CLI → `SuiteResult`. Harvest, resume, and upstream patches for FinSearchComp / Vals / LiveTradeBench live in `adapters/v2_ops/`. Operator CLI: `scripts/v2_suite_ops.py` (`progress|harvest|resume`). Main eval entry remains `scripts/run_eval.py` (`scripts/run_grok_cli_eval.py` is a thin alias). One scorecard per harness (`reports/GROK_CLI_SCORECARD.*` for grok-cli) with a required/optional tier per suite.
 
 How OpenClaw, Hermes, and each `modules/*` native surface map onto this LCD: [`docs/research/AGENT_PLUG_IN_SURVEY.md`](docs/research/AGENT_PLUG_IN_SURVEY.md), [`docs/research/PLUG_IN_MATRIX.md`](docs/research/PLUG_IN_MATRIX.md).
 

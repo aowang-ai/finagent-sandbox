@@ -24,7 +24,7 @@ from hashlib import sha256
 from pathlib import Path
 from typing import Any
 
-from adapters.base import AgentAdapter, Decision, Observation
+from adapters.base import ALL_SUITE_IDS, AgentAdapter, Decision, Observation
 
 DEFAULT_MODEL_API = os.environ.get("GROK_EVAL_MODEL", "grok-4.20-0309-non-reasoning")
 DEFAULT_MODEL_CLI = os.environ.get("GROK_EVAL_CLI_MODEL", "grok-4.6")
@@ -646,13 +646,7 @@ class GrokCliAgentAdapter:
         self.runner = runner or GrokRunner()
 
     def capabilities(self) -> set[str]:
-        return {
-            "ama.multi_market_live",
-            "finsaber.long_horizon",
-            "stockbench.daily_sim",
-            "fintoolbench.tool_compliance",
-            "deepfund.fund_arena",
-        }
+        return set(ALL_SUITE_IDS)
 
     def decide(self, observation: Observation) -> Decision:
         completion = self.runner.complete_json(

@@ -46,7 +46,7 @@ class InvestorBenchEnvAdapter:
             "role": "exam_room",
             "layer": "environment.decision_trading",
             "task_suite": "cross_asset_single_name",
-            "wave": "v2",
+            "tier": "optional",
             "required_for_promote": False,
             "module": str(self.module_path),
             "entry": "python run.py warmup|test|eval (docker devon)",

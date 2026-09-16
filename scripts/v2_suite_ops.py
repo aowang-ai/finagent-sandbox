@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""v2 suite operations: progress, harvest, resume.
+"""Optional-suite operations: progress, harvest, resume.
 
 Replaces the campaign one-offs `scripts/v2_continue_{finsearch,vals,livetrade,harvest,progress}.py`.
+Filename is historical; membership is OPTIONAL_SUITE_IDS.
 
 Usage:
   python scripts/v2_suite_ops.py progress
@@ -21,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from adapters.base import PLANNED_SUITE_IDS_V2
+from adapters.base import ALL_SUITE_IDS
 from adapters.v2_ops.finsearchcomp import (
     harvest_existing_run as harvest_finsearch,
     resume_official as resume_finsearch,
@@ -39,7 +40,7 @@ from adapters.v2_ops.vals_finance_agent import (
 from adapters.v2_runtime import json_list_len, pid_alive
 
 from sandbox.runtime.dumps import dump_suite, load_suite
-from sandbox.runtime.run_suites import compose_and_write_v2
+from sandbox.runtime.run_suites import compose_and_write
 
 
 RESUME = {
@@ -102,20 +103,20 @@ def cmd_harvest() -> int:
             f"[harvest {utc_now()}] {result.suite_id} status={result.status} metrics={metrics}",
             flush=True,
         )
-    v2_suites = []
-    for sid in PLANNED_SUITE_IDS_V2:
+    harvested_all: list = []
+    for sid in ALL_SUITE_IDS:
         loaded = load_suite(sid, harness_name="grok-cli")
         if loaded:
-            v2_suites.append(loaded)
-    compose_and_write_v2(
-        v2_suites,
+            harvested_all.append(loaded)
+    compose_and_write(
+        harvested_all,
         notes=(
-            "V2 parallel scorecard recomposed from artifacts/suite_results. "
-            "Never overwrites GROK_CLI_SCORECARD.*."
+            "Parallel scorecard recomposed from artifacts/suite_results. "
+            "Optional harvest rows share reports/GROK_CLI_SCORECARD.*."
         ),
         harness_name="grok-cli",
     )
-    print(f"[harvest {utc_now()}] wrote reports/GROK_CLI_SCORECARD_V2.md", flush=True)
+    print(f"[harvest {utc_now()}] wrote reports/GROK_CLI_SCORECARD.md", flush=True)
     snap = {
         "ts": utc_now(),
         "suites": {
@@ -141,10 +142,10 @@ def cmd_resume(suite: str) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="v2 suite progress / harvest / resume")
+    parser = argparse.ArgumentParser(description="optional-suite progress / harvest / resume")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("progress", help="one-line CONTINUE snapshot")
-    sub.add_parser("harvest", help="refresh v2 suite_results + GROK_CLI_SCORECARD_V2")
+    sub.add_parser("harvest", help="refresh suite_results + GROK_CLI_SCORECARD")
     p_resume = sub.add_parser("resume", help="resume official remaining work")
     p_resume.add_argument("suite", help="finsearch | vals | livetrade")
     args = parser.parse_args()

@@ -32,9 +32,9 @@ Overlay config (`artifacts/stockbench/config.grok.yaml`) plus an optional live-k
 
 Open release is eval + questions + tool manifest — no agent runtime. We emit JSONL; the evaluator is official. When RapidAPI/akshare are absent, tool `output` fields are model-produced.
 
-## v2 official-protocol glue
+## Optional-suite official-protocol glue
 
-v2 EnvAdapters live in `adapters/{suite}.py` and stay **protocol → official CLI → SuiteResult**. Shared subprocess / xAI env / skip notes / text patches are in `adapters/v2_runtime.py`. Resume, harvest, and upstream monkeypatches live in `adapters/v2_ops/` so adapter bodies do not mix exam-room flow with campaign glue.
+Optional EnvAdapters live in `adapters/{suite}.py` and stay **protocol → official CLI → SuiteResult**. Shared subprocess / xAI env / skip notes / text patches are in `adapters/v2_runtime.py`. Resume, harvest, and upstream monkeypatches live in `adapters/v2_ops/` so adapter bodies do not mix exam-room flow with campaign glue.
 
 | Suite | Official entry | Glue |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ v2 EnvAdapters live in `adapters/{suite}.py` and stay **protocol → official CL
 | FinMCP | `DianJin-TIR/infer` + `eval/evaluation.py` | skip unless Qieman MCP URL + schema exist |
 | InvestorBench | docker `devon warmup\|test\|eval` | skip unless docker + vLLM:8000 + Qdrant:6333 |
 
-Progress / harvest / resume of in-flight official runs: `python scripts/v2_suite_ops.py {progress,harvest,resume}`. Blockers: [`V2_SUITE_STATUS.md`](V2_SUITE_STATUS.md).
+Progress / harvest / resume of in-flight official runs: `python scripts/v2_suite_ops.py {progress,harvest,resume}`. Blockers: [`OPTIONAL_SUITE_STATUS.md`](OPTIONAL_SUITE_STATUS.md).
 
 ## AMA harvest
 

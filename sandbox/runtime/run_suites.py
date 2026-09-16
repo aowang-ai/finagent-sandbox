@@ -48,8 +48,9 @@ def ensure_eval_python() -> None:
 
 
 from adapters.base import (
-    PLANNED_SUITE_IDS_V2,
-    REQUIRED_SUITE_IDS_V1,
+    ALL_SUITE_IDS,
+    OPTIONAL_SUITE_IDS,
+    REQUIRED_SUITE_IDS,
     AgentIdentity,
     ProtocolSpec,
     SuiteResult,
@@ -63,7 +64,7 @@ from sandbox.benches.factory import BenchFactory, ProtocolFactory, SUITE_ALIASES
 from sandbox.harness.factory import HarnessFactory
 from sandbox.runtime.dumps import dump_suite, load_suite
 
-V2_VENV = {
+OPTIONAL_VENV = {
     "investorbench.decision": "v2_investor",
     "livetradebench.live": "v2_livetrade",
     "finmcp.tool_mcp": "v2_finmcp",
@@ -85,9 +86,9 @@ def _suite_status_on_disk(sid: str, *, harness_name: str = "grok-cli") -> str | 
 
 
 def _morning_ready_stamp(*, harness_name: str = "grok-cli") -> str:
-    """Morning-ready only when every v1 required suite has a non-error SuiteResult."""
+    """Morning-ready only when every required suite has a non-error SuiteResult."""
 
-    for sid in REQUIRED_SUITE_IDS_V1:
+    for sid in REQUIRED_SUITE_IDS:
         st = _suite_status_on_disk(sid, harness_name=harness_name)
         if st is None or st == SuiteStatus.ERROR.value:
             return "not yet"
@@ -96,7 +97,7 @@ def _morning_ready_stamp(*, harness_name: str = "grok-cli") -> str:
 
 def _remaining_suite_ids(*, harness_name: str = "grok-cli") -> list[str]:
     leftover: list[str] = []
-    for sid in REQUIRED_SUITE_IDS_V1:
+    for sid in REQUIRED_SUITE_IDS:
         st = _suite_status_on_disk(sid, harness_name=harness_name)
         if st is None or st == SuiteStatus.ERROR.value:
             leftover.append(f"{sid} ({st or 'missing'})")
@@ -170,32 +171,34 @@ def write_status(
     )
 
 
-def _scorecard_names(harness_name: str) -> tuple[str, str | None, str, str]:
-    """v1 runner_name, v1 md override, v2 runner_name, v2 md name.
-
-    v2 composition stays Grok-only for GROK_CLI_SCORECARD_V2. Other harnesses
-    get their own files and must never write the Grok scorecards.
-    """
+def _scorecard_names(harness_name: str) -> tuple[str, str | None]:
+    """One scorecard per harness. grok-cli → reports/GROK_CLI_SCORECARD.*."""
 
     if harness_name == "grok-cli":
-        return "GROK_CLI", None, "GROK_CLI_V2", "GROK_CLI_SCORECARD_V2.md"
+        return "GROK_CLI", None
     stem = harness_name.upper().replace("-", "_")
-    return stem, None, f"{stem}_V2", f"{stem}_SCORECARD_V2.md"
+    return stem, None
 
 
 def compose_and_write(suites: list[SuiteResult], notes: str, *, harness_name: str = "grok-cli") -> None:
-    """Write the v1 scorecard from v1 required suites only."""
+    """Write one harness scorecard. Required + optional rows; completeness uses required."""
 
-    v1 = [s for s in suites if s.suite_id in REQUIRED_SUITE_IDS_V1]
-    if not v1:
+    if not suites:
         return
-    runner_name, md_name, _, _ = _scorecard_names(harness_name)
+    by_id: dict[str, SuiteResult] = {}
+    for suite in suites:
+        by_id[suite.suite_id] = suite
+    ordered = [by_id[sid] for sid in ALL_SUITE_IDS if sid in by_id]
+    if not ordered:
+        return
+    runner_name, md_name = _scorecard_names(harness_name)
     report = compose_acceptance_report(
         AgentIdentity(agent_id=harness_name, name=harness_name, version="overnight"),
-        v1,
+        ordered,
         report_id=str(uuid.uuid4()),
         notes=notes,
-        required_suites=REQUIRED_SUITE_IDS_V1,
+        required_suites=REQUIRED_SUITE_IDS,
+        optional_suites=OPTIONAL_SUITE_IDS,
     )
     write_scorecard(
         report,
@@ -206,37 +209,17 @@ def compose_and_write(suites: list[SuiteResult], notes: str, *, harness_name: st
 
 
 def compose_and_write_v2(suites: list[SuiteResult], notes: str, *, harness_name: str = "grok-cli") -> None:
-    """Write the v2 scorecard from planned v2 suites only. Never touch v1 files.
+    """Deprecated alias: optional rows land on the same harness scorecard."""
 
-    GROK_CLI_SCORECARD_V2 is Grok-only.
-    """
-
-    v2 = [s for s in suites if s.suite_id in PLANNED_SUITE_IDS_V2]
-    if not v2:
-        return
-    _, _, runner_name, md_name = _scorecard_names(harness_name)
-    json_name = md_name.replace(".md", ".json") if md_name else None
-    report = compose_acceptance_report(
-        AgentIdentity(agent_id=harness_name, name=harness_name, version="v2-real-runs"),
-        v2,
-        report_id=str(uuid.uuid4()),
-        notes=notes,
-        required_suites=PLANNED_SUITE_IDS_V2,
-    )
-    write_scorecard(
-        report,
-        repo_root=ROOT,
-        runner_name=runner_name,
-        md_name=md_name,
-        json_name=json_name,
-    )
+    compose_and_write(suites, notes, harness_name=harness_name)
 
 
 def _resolve_wanted(suites_arg: str) -> list[str]:
-    if suites_arg == "all":
-        return list(REQUIRED_SUITE_IDS_V1)
-    if suites_arg.strip() == "v2":
-        return list(PLANNED_SUITE_IDS_V2)
+    key = suites_arg.strip().lower()
+    if key in {"all", "required"}:
+        return list(REQUIRED_SUITE_IDS)
+    if key in {"optional", "v2"}:
+        return list(OPTIONAL_SUITE_IDS)
     return [SUITE_ALIASES.get(s.strip(), s.strip()) for s in suites_arg.split(",") if s.strip()]
 
 
@@ -265,52 +248,25 @@ def run_suites(
         return 2
 
     if report_only:
-        v1_wanted = [sid for sid in wanted if sid in REQUIRED_SUITE_IDS_V1]
-        v2_wanted = [sid for sid in wanted if sid in PLANNED_SUITE_IDS_V2]
-        if not v1_wanted and not v2_wanted:
-            if suites.strip() == "v2":
-                v2_wanted = list(PLANNED_SUITE_IDS_V2)
-            else:
-                v1_wanted = list(REQUIRED_SUITE_IDS_V1)
-        wrote = False
-        if v1_wanted:
-            v1_suites: list[SuiteResult] = []
-            for sid in REQUIRED_SUITE_IDS_V1:
-                loaded = load_suite(sid, harness_name=harness_name)
-                if loaded:
-                    v1_suites.append(loaded)
-            if v1_suites:
-                compose_and_write(
-                    v1_suites,
-                    notes="recomposed from artifacts/suite_results",
-                    harness_name=harness_name,
-                )
-                print("wrote reports/GROK_CLI_SCORECARD.md" if harness_name == "grok-cli" else f"wrote {harness_name} v1 scorecard")
-                wrote = True
-        if v2_wanted or suites.strip() == "v2":
-            v2_suites: list[SuiteResult] = []
-            for sid in PLANNED_SUITE_IDS_V2:
-                loaded = load_suite(sid, harness_name=harness_name)
-                if loaded:
-                    v2_suites.append(loaded)
-            if v2_suites:
-                compose_and_write_v2(
-                    v2_suites,
-                    notes=(
-                        "V2 parallel scorecard recomposed from artifacts/suite_results. "
-                        "Never overwrites GROK_CLI_SCORECARD.*."
-                    ),
-                    harness_name=harness_name,
-                )
-                print(
-                    "wrote reports/GROK_CLI_SCORECARD_V2.md"
-                    if harness_name == "grok-cli"
-                    else f"wrote {harness_name} v2 scorecard"
-                )
-                wrote = True
-        if not wrote:
+        loaded_suites: list[SuiteResult] = []
+        for sid in ALL_SUITE_IDS:
+            loaded = load_suite(sid, harness_name=harness_name)
+            if loaded:
+                loaded_suites.append(loaded)
+        if not loaded_suites:
             print("no suite_results to compose")
             return 1
+        compose_and_write(
+            loaded_suites,
+            notes="recomposed from artifacts/suite_results (one scorecard per harness; optional rows tagged)",
+            harness_name=harness_name,
+        )
+        label = (
+            "wrote reports/GROK_CLI_SCORECARD.md"
+            if harness_name == "grok-cli"
+            else f"wrote {harness_name} scorecard"
+        )
+        print(label)
         return 0
 
     artifacts_dir = ROOT / "artifacts" / ("grok_cli" if harness_name == "grok-cli" else harness_name)
@@ -323,22 +279,15 @@ def run_suites(
     completed: list[str] = []
     blockers: list[str] = []
     results: list[SuiteResult] = []
-    v2_results: list[SuiteResult] = []
 
-    for sid in REQUIRED_SUITE_IDS_V1:
+    for sid in ALL_SUITE_IDS:
         if sid in wanted:
             continue
         loaded = load_suite(sid, harness_name=harness_name)
         if loaded:
             results.append(loaded)
-            completed.append(f"{sid} (cached {loaded.status})")
-
-    for sid in PLANNED_SUITE_IDS_V2:
-        if sid in wanted:
-            continue
-        loaded = load_suite(sid, harness_name=harness_name)
-        if loaded:
-            v2_results.append(loaded)
+            if sid in REQUIRED_SUITE_IDS:
+                completed.append(f"{sid} (cached {loaded.status})")
 
     for sid in wanted:
         if harness_name == "grok-cli":
@@ -357,8 +306,8 @@ def run_suites(
         proto.extra["execute"] = not dry
         proto.extra["artifacts_dir"] = str(ROOT / "artifacts" / sid.split(".")[0])
         proto.extra["harness_name"] = harness.name()
-        if sid in V2_VENV:
-            proto.extra["python"] = repo_venv_python(ROOT, V2_VENV[sid])
+        if sid in OPTIONAL_VENV:
+            proto.extra["python"] = repo_venv_python(ROOT, OPTIONAL_VENV[sid])
         else:
             proto.extra["python"] = default_eval_python()
         print(f"=== {sid} execute={proto.extra['execute']} python={proto.extra['python']} ===", flush=True)
@@ -402,36 +351,21 @@ def run_suites(
             blockers.append(f"{sid}: {exc}")
         dump_suite(result, harness_name=harness_name)
         results = [s for s in results if s.suite_id != sid] + [result]
-        v2_results = [s for s in v2_results if s.suite_id != sid] + (
-            [result] if result.suite_id in PLANNED_SUITE_IDS_V2 else []
-        )
         completed.append(f"{sid} status={result.status}")
-        if any(w in REQUIRED_SUITE_IDS_V1 for w in wanted):
-            if harness_name == "grok-cli":
-                v1_notes = (
-                    "Parallel scorecard for Grok CLI. Per-suite pass/fail is not a veto. "
-                    f"backend={backend or ''} model={harness.version()}."
-                )
-            else:
-                v1_notes = (
-                    f"Parallel scorecard for {harness_name}. Per-suite pass/fail is not a veto."
-                )
-            compose_and_write(results, notes=v1_notes, harness_name=harness_name)
-        if any(w in PLANNED_SUITE_IDS_V2 for w in wanted):
-            if harness_name == "grok-cli":
-                v2_notes = (
-                    "V2 parallel scorecard for Grok CLI. Official protocols only; "
-                    "skip names missing key/data/service. Never overwrites GROK_CLI_SCORECARD.*. "
-                    f"backend={backend or ''} model={harness.version()}."
-                )
-            else:
-                v2_notes = (
-                    f"V2 parallel scorecard for {harness_name}. "
-                    "Never overwrites GROK_CLI_SCORECARD.*."
-                )
-            compose_and_write_v2(v2_results, notes=v2_notes, harness_name=harness_name)
+        if harness_name == "grok-cli":
+            card_notes = (
+                "Parallel scorecard for Grok CLI. Required benches drive completeness; "
+                "optional benches skip if deps are missing. Per-suite pass/fail is not a veto. "
+                f"backend={backend or ''} model={harness.version()}."
+            )
+        else:
+            card_notes = (
+                f"Parallel scorecard for {harness_name}. Required benches drive completeness; "
+                "optional benches skip if deps are missing. Per-suite pass/fail is not a veto."
+            )
+        compose_and_write(results, notes=card_notes, harness_name=harness_name)
         print(f"=== {sid} -> {result.status} ===", flush=True)
-        print(f"[v2] {sid} notes={(result.notes or '')[:240]}", flush=True)
+        print(f"[suite] {sid} notes={(result.notes or '')[:240]}", flush=True)
 
     write_status(
         live="idle (orchestrator finished requested suites)",
@@ -452,7 +386,11 @@ def cli_main(
     parser = argparse.ArgumentParser(description="Finance-agent eval (shared run_suites)")
     if expose_harness_flag:
         parser.add_argument("--harness", default=default_harness, help="registry key (default grok-cli)")
-    parser.add_argument("--suites", default="all", help="comma list or all")
+    parser.add_argument(
+        "--suites",
+        default="all",
+        help="all|required (default completeness set), optional, or comma list of ids/aliases",
+    )
     parser.add_argument("--dry", action="store_true", help="do not execute engines")
     parser.add_argument("--report-only", action="store_true")
     parser.add_argument("--backend", default=os.environ.get("GROK_EVAL_BACKEND", "api"))

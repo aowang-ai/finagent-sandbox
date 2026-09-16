@@ -1,6 +1,6 @@
 # Upstream modules
 
-Local clones sit under `modules/` (gitignored). Fetch with `./scripts/clone_modules.sh` (v1 five + v2 six). Doctor prints `origin` + `HEAD` when `.git` exists. v2 modules are optional: doctor warns if they are missing.
+Local clones sit under `modules/` (gitignored). Fetch with `./scripts/clone_modules.sh` (required five + optional six). Doctor prints `origin` + `HEAD` when `.git` exists. Optional modules: doctor warns if they are missing.
 
 This document is a map of **official entrypoints**, not a reproduction guide. Install hints are upstream's; we do not vendor their dependency trees.
 
@@ -319,14 +319,14 @@ Adapter stub: `adapters/finsaber.py`.
 | Does it still decide on live crypto + names with news? | AMA | suite among equals |
 | Can a fund graph leave an auditable decision trace? | DeepFund | suite among equals |
 | Does it pick the right tool on time, with the right intent and domain? | FinToolBench | suite among equals |
-| Can it decide across stocks / crypto / ETFs in InvestorBench's env? | InvestorBench | v2 optional |
-| Does live multi-market allocation (stocks + Polymarket) still work? | LiveTradeBench | v2 optional |
-| Does it orchestrate real MCP financial tools? | FinMCP-Bench | v2 optional |
-| Can it research SEC filings with tools? | Vals Finance Agent | v2 optional |
-| Can it fetch time-sensitive figures and investigate historically? | FinSearchComp | v2 optional |
-| Can it size a PIT S&P 500 book with an audit trail? | OpenPM | v2 optional (preferred over PortBench) |
+| Can it decide across stocks / crypto / ETFs in InvestorBench's env? | InvestorBench | optional |
+| Does live multi-market allocation (stocks + Polymarket) still work? | LiveTradeBench | optional |
+| Does it orchestrate real MCP financial tools? | FinMCP-Bench | optional |
+| Can it research SEC filings with tools? | Vals Finance Agent | optional |
+| Can it fetch time-sensitive figures and investigate historically? | FinSearchComp | optional |
+| Can it size a PIT S&P 500 book with an audit trail? | OpenPM | optional (preferred over PortBench) |
 
-One `AgentAdapter` is the unit under test. Each suite is an exam room. `admission.decision` is completeness only — FINSABER does not veto the others. v2 suites are optional (`PLANNED_SUITE_IDS_V2`) until a full protocol run exists. See `GOAL.md` and `ARCHITECTURE.md`. Compose is not pure everywhere: `docs/engineering/GLUE.md`.
+One `AgentAdapter` is the unit under test. Each suite is an exam room. `admission.decision` is completeness only — FINSABER does not veto the others. Optional suites (`OPTIONAL_SUITE_IDS`) skip if deps are missing; they do not HOLD promote. See `GOAL.md` and `ARCHITECTURE.md`. Compose is not pure everywhere: `docs/engineering/GLUE.md`.
 
 ---
 
@@ -337,7 +337,7 @@ One `AgentAdapter` is the unit under test. Each suite is an exam room. `admissio
 | Path | `modules/investorbench` |
 | Upstream | https://github.com/felis33/INVESTOR-BENCH |
 | Paper | https://arxiv.org/abs/2412.18174 · ACL 2025 |
-| Role | Cross-asset decision · **exam room** (`investorbench.decision`) · v2 optional |
+| Role | Cross-asset decision · **exam room** (`investorbench.decision`) · optional |
 | License | MIT |
 | Clone HEAD | `87e0f7b` (recorded at expand; re-check with doctor) |
 
@@ -378,7 +378,7 @@ In-clone env data: `data/{hon,jnj,msft,nflx,uvv,btc,eth}.json`. README equity wi
 | Upstream | https://github.com/ulab-uiuc/live-trade-bench |
 | Paper | https://arxiv.org/abs/2511.03628 |
 | Site | https://trade-bench.live |
-| Role | Live US equities + Polymarket · **exam room** (`livetradebench.live`) · v2 optional |
+| Role | Live US equities + Polymarket · **exam room** (`livetradebench.live`) · optional |
 | License | PolyForm Noncommercial 1.0.0 (`LICENSE.COMMERCIAL` for commercial) |
 
 ### Install hint
@@ -424,7 +424,7 @@ Per-agent performance from the system: return / risk (harvest `get_all_agent_per
 | Upstream | https://github.com/aliyun/qwen-dianjin |
 | Paper | https://arxiv.org/abs/2603.24943 · ICASSP 2026 |
 | Dataset | https://huggingface.co/datasets/DianJin/FinMCP-Bench |
-| Role | MCP tool orchestration · **exam room** (`finmcp.tool_mcp`) · v2 optional |
+| Role | MCP tool orchestration · **exam room** (`finmcp.tool_mcp`) · optional |
 | License | MIT (hub). Dataset CC-BY-NC-SA-4.0. |
 
 ### Official entry
@@ -453,7 +453,7 @@ python eval/evaluation.py --eval_data_path=<pred.json>
 | Upstream | https://github.com/vals-ai/finance-agent |
 | Paper | https://arxiv.org/abs/2508.00828 |
 | Site | https://www.vals.ai/benchmarks/finance_agent |
-| Role | Expert SEC/research + tools · **exam room** (`vals_finance_agent.research`) · v2 optional |
+| Role | Expert SEC/research + tools · **exam room** (`vals_finance_agent.research`) · optional |
 | License | MIT |
 
 ### Official entry
@@ -481,7 +481,7 @@ Tools: `web_search` (Tavily), `edgar_search`, `parse_html_page`, `retrieve_infor
 | Upstream | https://github.com/randomtutu/FinSearchComp |
 | Paper | https://arxiv.org/abs/2509.13160 |
 | Dataset | https://huggingface.co/datasets/ByteSeedXpert/FinSearchComp |
-| Role | Time-sensitive financial search · **exam room** (`finsearchcomp.search`) · v2 optional |
+| Role | Time-sensitive financial search · **exam room** (`finsearchcomp.search`) · optional |
 | License | CC-BY-4.0 |
 
 ### Official entry
@@ -514,7 +514,7 @@ python finsearchcomp/eval/eval.py \
 | Path | `modules/openpm` |
 | Upstream | https://github.com/aslcai/OpenPM-Bench |
 | Dataset | https://huggingface.co/datasets/aslcai/OpenPM-Bench |
-| Role | PIT portfolio + honesty audit trail · **exam room** (`openpm.portfolio_pit`) · v2 optional |
+| Role | PIT portfolio + honesty audit trail · **exam room** (`openpm.portfolio_pit`) · optional |
 | License | Apache-2.0 |
 
 Preferred over PortBench (`GOAL.md`). Do not add PortBench as required.

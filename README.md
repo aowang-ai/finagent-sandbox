@@ -28,7 +28,7 @@ Scoring is a **parallel scorecard**: every suite reports its own pass/fail. FINS
 
 ## Upstream benches (we compose)
 
-### v1 — required for `admission.decision=promote`
+### Required — `admission.decision=promote` completeness set
 
 | Dir | Upstream | Paper | Role |
 | --- | --- | --- | --- |
@@ -38,7 +38,7 @@ Scoring is a **parallel scorecard**: every suite reports its own pass/fail. FINS
 | `modules/fintoolbench` | [Double-wk/FinToolBench](https://github.com/Double-wk/FinToolBench) | [arXiv:2603.08262](https://arxiv.org/abs/2603.08262) | Tool-call + timeliness/intent/domain |
 | `modules/finsaber` | [waylonli/FINSABER](https://github.com/waylonli/FINSABER) | [arXiv:2505.07078](https://arxiv.org/abs/2505.07078) | Long-horizon anti-bias (suite among equals) |
 
-### v2 — cloned + official-protocol adapters, optional until a complete scorecard is wanted
+### Optional — same `BenchFactory`; skip if deps are missing
 
 | Dir | Upstream | Paper | Role |
 | --- | --- | --- | --- |
@@ -60,7 +60,7 @@ cd finagent-sandbox
 # 1. Placeholder env only — copy and fill; never commit .env
 cp .env.example .env
 
-# 2. Fetch v1+v2 upstreams (idempotent, shallow). Does not download parquet dumps.
+# 2. Fetch required + optional upstreams (idempotent, shallow). Does not download parquet dumps.
 ./scripts/clone_modules.sh
 
 # 3. Dry "infra doctor" — no API keys, no parquet, no LLM
@@ -70,18 +70,18 @@ cp .env.example .env
 PYTHONPATH=. python scripts/run_eval.py --harness grok-cli --dry
 ```
 
-Doctor checks that **v1** modules exist (fail if missing), **warns** if optional v2 clones are absent, compiles `adapters/` + `sandbox/` factories, parses `ACCEPTANCE_REPORT.schema.json`, and runs a dummy `AgentAdapter` through v1 five + v2 six (dry skip). Expected admission on v1 stubs: **HOLD** (scorecard incomplete). A FINSABER fail does not veto other suites.
+Doctor checks that **required** modules exist (fail if missing), **warns** if optional clones are absent, compiles `adapters/` + `sandbox/` factories, parses `ACCEPTANCE_REPORT.schema.json`, and runs a dummy `AgentAdapter` through the required five + optional six (dry skip). Expected admission on required stubs: **HOLD** (scorecard incomplete). A FINSABER fail does not veto other suites.
 
 Executed scorecards are **generated artifacts**, not vendored in this skeleton. After a real run:
 
 ```bash
-# optional: skip-path smoke of v1 adapters
+# optional: skip-path smoke of required adapters
 PYTHONPATH=. python scripts/run_eval.py --harness grok-cli --dry
 
 # optional: recompose an on-disk scorecard (no suite re-run, no LLM)
 PYTHONPATH=. python scripts/run_eval.py --harness grok-cli --report-only
 
-# optional: v2 harvest / progress (does not rewrite a v1 scorecard)
+# optional-suite harvest / progress (same GROK_CLI_SCORECARD, tier=optional)
 python scripts/v2_suite_ops.py progress
 python scripts/v2_suite_ops.py harvest
 ```
@@ -103,7 +103,7 @@ scripts/run_grok_cli_eval.py   alias: run_eval --harness grok-cli
 ACCEPTANCE_REPORT.schema.json
 docs/paper/                    Harbor norms, sandbox design, migration plan
 docs/product/POSITIONING.md    admission infra vs public leaderboards
-docs/engineering/              compose glue + v2 suite status
+docs/engineering/              compose glue + optional suite status
 CONTRIBUTING.md                how to register a harness / bench / plugin
 modules/                       gitignored clones (README + .gitkeep are tracked)
 reports/                       generate scorecards here; skeleton ships .gitkeep only

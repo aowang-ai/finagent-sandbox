@@ -27,11 +27,11 @@ Usage: scripts/doctor.sh [--help]
 Checks (no network, no API keys):
   - product skeleton (docs / adapters / schema / product scripts)
   - does not require overnight/campaign scripts
-  - v1 modules/<name> present with official entry files (fail if missing)
-  - v2 modules optional: warn if missing, never fail doctor
+  - required modules/<name> present with official entry files (fail if missing)
+  - optional modules: warn if missing, never fail doctor
   - git remote + HEAD for each cloned module (if .git exists)
   - ACCEPTANCE_REPORT.schema.json parses
-  - adapters package imports (stdlib only), including v2 adapters
+  - adapters package imports (stdlib only), including optional-suite adapters
   - optional --help / py_compile smoke when cheap
 
 Exit 0 iff every structural check passed. Optional smokes are warnings.
@@ -80,7 +80,7 @@ REQUIRED_FILES=(
   adapters/finsearchcomp.py
   adapters/openpm.py
   adapters/v2_runtime.py
-  docs/engineering/V2_SUITE_STATUS.md
+  docs/engineering/OPTIONAL_SUITE_STATUS.md
   docs/paper/HARBOR_NORMS.md
   docs/paper/SANDBOX_REPO_DESIGN.md
   docs/paper/MIGRATION_PLAN.md
@@ -195,13 +195,13 @@ check_module finsaber \
   backtest/finsaber.py \
   backtest/toolkit/metrics.py
 
-# v2 modules: warn (do not fail) if optional clones are absent.
+# optional modules: warn (do not fail) if clones are absent.
 check_optional_module() {
   local name="$1"
   shift
   local dir="${ROOT}/modules/${name}"
   if [[ ! -d "${dir}" ]]; then
-    warn "optional v2 module missing: modules/${name}  (run scripts/clone_modules.sh)"
+    warn "optional module missing: modules/${name}  (run scripts/clone_modules.sh)"
     return
   fi
   pass "optional module dir modules/${name}"
@@ -228,7 +228,7 @@ check_optional_module() {
 }
 
 echo
-echo "-- optional v2 modules (warn if missing; do not fail doctor) --"
+echo "-- optional modules (warn if missing; do not fail doctor) --"
 
 check_optional_module investorbench \
   README.md \
@@ -348,8 +348,8 @@ PY
   if PYTHONPATH="${ROOT}" python3 - <<'PY'
 from adapters.base import (
     ALL_SUITE_IDS,
-    PLANNED_SUITE_IDS_V2,
-    REQUIRED_SUITE_IDS_V1,
+    OPTIONAL_SUITE_IDS,
+    REQUIRED_SUITE_IDS,
     AgentAdapter,
     AgentIdentity,
     EnvAdapter,
@@ -384,10 +384,10 @@ class Dummy:
 agent = Dummy()
 assert isinstance(agent, AgentAdapter)
 
-assert ALL_SUITE_IDS == REQUIRED_SUITE_IDS_V1 + PLANNED_SUITE_IDS_V2
-assert set(REQUIRED_SUITE_IDS_V1).isdisjoint(PLANNED_SUITE_IDS_V2)
-assert len(REQUIRED_SUITE_IDS_V1) == 5
-assert len(PLANNED_SUITE_IDS_V2) == 6
+assert ALL_SUITE_IDS == REQUIRED_SUITE_IDS + OPTIONAL_SUITE_IDS
+assert set(REQUIRED_SUITE_IDS).isdisjoint(OPTIONAL_SUITE_IDS)
+assert len(REQUIRED_SUITE_IDS) == 5
+assert len(OPTIONAL_SUITE_IDS) == 6
 
 envs = [
     StockBenchEnvAdapter(),
@@ -405,7 +405,7 @@ for env in envs:
     assert result.status == "skip", result
     suites.append(result)
 
-v2_envs = [
+optional_envs = [
     InvestorBenchEnvAdapter(),
     LiveTradeBenchEnvAdapter(),
     FinMcpEnvAdapter(),
@@ -413,14 +413,14 @@ v2_envs = [
     FinSearchCompEnvAdapter(),
     OpenPmEnvAdapter(),
 ]
-for env in v2_envs:
+for env in optional_envs:
     assert isinstance(env, EnvAdapter)
     proto = ProtocolSpec(suite_id=env.suite_id)
     result = env.run(agent, proto)
     assert isinstance(result, SuiteResult)
     assert result.status == "skip", result
     assert result.upstream_cli, env.suite_id
-    assert env.suite_id in PLANNED_SUITE_IDS_V2
+    assert env.suite_id in OPTIONAL_SUITE_IDS
 
 report = compose_acceptance_report(
     AgentIdentity(agent_id="dummy-v0", name="doctor-dummy"),
@@ -431,12 +431,12 @@ assert report.admission.decision == "hold", report.admission
 assert report.admission.kernel == "parallel_scorecard", report.admission
 assert report.protocol_hash.startswith("sha256:")
 assert canonical_protocol_hash(suites[0].protocol).startswith("sha256:")
-assert list(report.admission.required_suites) == list(REQUIRED_SUITE_IDS_V1)
+assert list(report.admission.required_suites) == list(REQUIRED_SUITE_IDS)
 
 # Parallel scorecard: FINSABER fail must not veto other suites.
-# Completeness uses v1 required ids so v2 skips cannot HOLD forever.
+# Completeness uses required ids so optional skips cannot HOLD forever.
 scored = []
-for sid in REQUIRED_SUITE_IDS_V1:
+for sid in REQUIRED_SUITE_IDS:
     scored.append(SuiteResult(
         suite_id=sid,
         status="fail" if sid == "finsaber.long_horizon" else "pass",
@@ -448,7 +448,7 @@ assert "veto" not in scored_report.rationale.lower() or "not a veto" in scored_r
 print("admission=", report.admission.decision, "suites=", [s.suite_id for s in suites])
 print("protocol_hash=", report.protocol_hash)
 print("parallel_scorecard_complete=", scored_report.decision)
-print("v2_planned=", list(PLANNED_SUITE_IDS_V2))
+print("optional=", list(OPTIONAL_SUITE_IDS))
 
 from runners.scorecard import SUITE_METRIC_PREFER, _metric_summary, render_markdown
 from adapters.base import Metric, compose_acceptance_report
@@ -478,10 +478,12 @@ md = render_markdown(
 )
 assert "parallel scorecard" in md.lower()
 assert "global veto" in md.lower()
+assert "| Suite | Tier |" in md
+assert "required" in md.lower()
 print("scorecard_prefer_ok")
 PY
   then
-    pass "adapters import + dummy AgentAdapter → v1 five skipped → HOLD; v2 stubs skip; FINSABER fail does not veto"
+    pass "adapters import + dummy AgentAdapter → required five skipped → HOLD; optional stubs skip; FINSABER fail does not veto"
   else
     fail "adapters import / compose smoke failed"
   fi
@@ -599,7 +601,7 @@ for leftover in \
   scripts/v2_continue_progress.py
 do
   if [[ -e "${ROOT}/${leftover}" ]]; then
-    warn "campaign leftover still at ${leftover}; remove it (v2 ops live in scripts/v2_suite_ops.py)"
+    warn "campaign leftover still at ${leftover}; remove it (optional-suite ops live in scripts/v2_suite_ops.py)"
   fi
 done
 
@@ -610,12 +612,12 @@ else
 fi
 
 echo
-echo "-- optional v2 venvs (warn if missing; do not fail doctor) --"
+echo "-- optional suite venvs (warn if missing; do not fail doctor) --"
 for venv_name in v2_finsearch v2_vals v2_livetrade v2_openpm v2_finmcp; do
   if [[ -x "${ROOT}/venvs/${venv_name}/bin/python" ]]; then
     pass "venv venvs/${venv_name}"
   else
-    warn "optional venv missing: venvs/${venv_name} (v2 execute falls back to sys.executable)"
+    warn "optional venv missing: venvs/${venv_name} (optional execute falls back to sys.executable)"
   fi
 done
 

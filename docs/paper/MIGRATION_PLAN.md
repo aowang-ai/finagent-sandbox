@@ -17,11 +17,11 @@
 
 ## Invariants (every phase)
 
-- **Do not wipe or rewrite metric values** in `reports/GROK_CLI_SCORECARD.*`, `reports/GROK_CLI_SCORECARD_V2.*`, or the **legacy flat** `artifacts/suite_results/{suite_id}.json` (Sep-12 Grok dumps).
+- **Do not wipe or rewrite metric values** in `reports/GROK_CLI_SCORECARD.*` or the **legacy flat** `artifacts/suite_results/{suite_id}.json` (Sep-12 Grok dumps). One scorecard per harness; optional rows use `tier=optional`.
 - **Dump namespace (Phase B+):** write only `artifacts/suite_results/<harness>/{suite_id}.json`. Never write the flat path. Non-Grok never writes `grok-cli/`. Grok `--report-only` reads `grok-cli/` then falls back to the legacy flat file.
 - **Seating:** a harness that cannot sit a `decide()`-bench **skips**; it does **not** HOLD-fill. Empty `suite_ids()` = sit none.
 - **Provider ≠ 行情 / MCP plugin.** `LocalProcessSandbox` is isolation (session `HOME`). MCP / data env is `PluginFactory`. Yahoo harvest stays `runners/yahoo.py`. Cite [`HARBOR_NORMS.md`](HARBOR_NORMS.md) / [`SANDBOX_REPO_DESIGN.md`](SANDBOX_REPO_DESIGN.md); do not rewrite them in a code PR.
-- `--suites all` = v1 five. `scripts/doctor.sh` stays green (or fails only on checks we added on purpose). Docker is never required.
+- `--suites all` = required five. `scripts/doctor.sh` stays green (or fails only on checks we added on purpose). Docker is never required.
 - No phase implements a full Claude Code / Codex / OpenClaw harness. Empty stubs are **not** a milestone.
 
 ```mermaid
@@ -137,14 +137,14 @@ Do not rewrite `GrokCliAgentAdapter.decide` schemas; do not treat `AgentAdapter.
 
 ### Acceptance
 
-- `python scripts/run_grok_cli_eval.py --dry` still skip-holds the v1 five.
+- `python scripts/run_grok_cli_eval.py --dry` still skip-holds the required five.
 - `python scripts/run_eval.py --harness grok-cli --dry` equivalent (same `run_suites`).
 - `HarnessFactory.create("grok-cli").name() == "grok-cli"`.
 - `HarnessFactory.create("claude-code")` raises `ValueError` listing `grok-cli` only.
-- `--report-only` recomposes v1 from `grok-cli/` **or** legacy flat Sep-12 JSON.
+- `--report-only` recomposes the harness scorecard from `grok-cli/` **or** legacy flat Sep-12 JSON.
 - A dry Grok run does not rewrite Sep-12 flat files.
 - Existing in-process suites still import `GrokCliAgentAdapter`.
-- v2 composition remains Grok-only (`GROK_CLI_SCORECARD_V2`).
+- Optional rows share the same harness scorecard (`GROK_CLI_SCORECARD.*` for grok-cli) with `tier=optional`.
 - doctor green; no scorecard hash tests.
 
 ---
@@ -179,7 +179,7 @@ Do not change `SuiteResult` fields, `evaluate_admission`, or force `sandbox.exec
 
 ### Acceptance
 
-- `python scripts/run_grok_cli_eval.py --report-only` recomposes v1 from `grok-cli/` **or** legacy flat; suite **rows** (metrics) unchanged.
+- `python scripts/run_grok_cli_eval.py --report-only` recomposes the harness scorecard from `grok-cli/` **or** legacy flat; suite **rows** (metrics) unchanged.
 - `BenchFactory.create("finsaber.long_horizon").suite_id == "finsaber.long_horizon"` and `.run_official` exists (wrapper, not the raw class).
 - Unknown suite_id → `ValueError` with known ids.
 - doctor: import factory; still checks each `adapters/{name}.py` exists.
@@ -223,7 +223,7 @@ Do not write harness config to the operator `$HOME`. Do not import `PluginFactor
 - doctor does not mention docker as a fail.
 - Scorecards and flat suite_results untouched.
 
-`LocalProcessSandbox` accepts `python: Path | None` so v2 suites keep `venvs/v2_finsearch/bin/python`. Do not merge venvs.
+`LocalProcessSandbox` accepts `python: Path | None` so optional suites keep `venvs/v2_finsearch/bin/python`. Do not merge venvs.
 
 ---
 
@@ -287,7 +287,7 @@ When a real harness lands:
 | Grok scorecard metrics not rewritten | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Legacy flat Sep-12 `suite_results/{sid}.json` unread-write | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Non-Grok dumps never land in flat or `grok-cli/` | — | ✓ | ✓ | ✓ | ✓ | ✓ |
-| `REQUIRED_SUITE_IDS_V1` unchanged; `--suites all` = v1 five | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `REQUIRED_SUITE_IDS` unchanged; `--suites all` = required five | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Grok dry eval skip/hold still works | — | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Three factories importable; unknown name → `ValueError` + known keys | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | Second harness cannot clobber Grok reports **or** Grok suite_results | — | — | — | — | — | ✓ |

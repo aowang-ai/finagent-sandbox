@@ -64,7 +64,7 @@ class FinMcpEnvAdapter:
             "role": "exam_room",
             "layer": "environment.tool_mcp",
             "task_suite": "mcp_tool_orchestration",
-            "wave": "v2",
+            "tier": "optional",
             "required_for_promote": False,
             "module": str(self.tir_path),
             "entry": "python DianJin-TIR/eval/evaluation.py --eval_data_path=...",
@@ -285,7 +285,7 @@ def _run_cmd(
     """Official CLI: sandbox.exec_sync when a sandbox is seated, else host run_logged."""
 
     if sandbox is not None:
-        print(f"[v2] sandbox.exec_sync cwd={cwd} cmd={' '.join(cmd)} log={log_path}", flush=True)
+        print(f"[suite] sandbox.exec_sync cwd={cwd} cmd={' '.join(cmd)} log={log_path}", flush=True)
         result = sandbox.exec_sync(list(cmd), cwd=str(cwd), env=dict(env))
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("w", encoding="utf-8") as logf:

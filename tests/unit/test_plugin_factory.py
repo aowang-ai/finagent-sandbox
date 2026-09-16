@@ -22,6 +22,7 @@ from sandbox.runtime.trial import Trial
 ROOT = Path(__file__).resolve().parents[2]
 MCP_PY = ROOT / "sandbox" / "plugins" / "mcp.py"
 FINMCP_TIR = ROOT / "modules" / "finmcp" / "DianJin-TIR"
+FINMCP_BENCH = FINMCP_TIR / "Benchmark" / "benchmark_final.json"
 
 
 class DummyHarness:
@@ -118,8 +119,8 @@ class FinMcpWrapTests(unittest.TestCase):
         self.assertEqual(fake.calls, [])
 
     @unittest.skipUnless(
-        FINMCP_TIR.is_dir(),
-        "modules/finmcp clone not present (gitignored; run scripts/clone_modules.sh)",
+        FINMCP_TIR.is_dir() and FINMCP_BENCH.is_file(),
+        "FinMCP official bench JSON not present (HF DianJin/FinMCP-Bench; clone is not enough)",
     )
     def test_run_official_invokes_exec_sync_when_configured(self) -> None:
         bench = BenchFactory.create("finmcp.tool_mcp", repo_root=ROOT)

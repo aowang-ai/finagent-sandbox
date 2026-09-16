@@ -4,15 +4,15 @@
 Thin alias into sandbox.runtime.run_suites with harness=grok-cli.
 
 Usage:
-  python scripts/run_grok_cli_eval.py                 # v1 five required suites, execute
+  python scripts/run_grok_cli_eval.py                 # required benches, execute
   python scripts/run_grok_cli_eval.py --suites ama
   python scripts/run_grok_cli_eval.py --suites investorbench,finmcp
-  python scripts/run_grok_cli_eval.py --suites v2      # planned v2 (does not rewrite v1 scorecard)
-  python scripts/run_grok_cli_eval.py --dry           # skip execute (doctor-like)
-  python scripts/run_grok_cli_eval.py --report-only   # recompose v1 from suite_results/
+  python scripts/run_grok_cli_eval.py --suites optional  # optional benches (same scorecard)
+  python scripts/run_grok_cli_eval.py --dry             # skip execute (doctor-like)
+  python scripts/run_grok_cli_eval.py --report-only     # recompose from suite_results/
 
-`--suites all` is the v1 five so completeness / GROK_CLI_SCORECARD stay stable.
-v2 aliases work; running only v2 does not rewrite reports/GROK_CLI_SCORECARD.*.
+`--suites all` (default) is the required five so completeness stays stable.
+Optional ids share `reports/GROK_CLI_SCORECARD.*` with a required/optional tier.
 """
 
 from __future__ import annotations

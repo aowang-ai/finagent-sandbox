@@ -13,10 +13,11 @@ from pathlib import Path
 from typing import Any
 
 from adapters.base import (
-    REQUIRED_SUITE_IDS_V1,
+    REQUIRED_SUITE_IDS,
     AcceptanceReport,
     SuiteResult,
     SuiteStatus,
+    suite_tier,
 )
 
 # Per-suite headline metrics (parallel scorecard — no suite is a veto).
@@ -75,6 +76,9 @@ def write_scorecard(
         extra = " Live: " + "; ".join(live)
         if extra.strip() not in str(payload.get("notes") or ""):
             payload["notes"] = (str(payload.get("notes") or "").rstrip() + extra).strip()
+    for suite in payload.get("suites") or []:
+        if isinstance(suite, dict) and suite.get("suite_id"):
+            suite.setdefault("tier", suite_tier(str(suite["suite_id"])))
     json_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     md_path.write_text(render_markdown(report, repo_root=root, runner_name=stem), encoding="utf-8")
     return md_path, json_path
@@ -109,23 +113,27 @@ def render_markdown(
     lines.append("")
     lines.append("Per-suite pass/fail is **not** a global veto. FINSABER honesty gates stay on that suite.")
     lines.append("")
-    lines.append("| Suite | Status | Key metrics | Notes |")
-    lines.append("| --- | --- | --- | --- |")
+    lines.append("| Suite | Tier | Status | Key metrics | Notes |")
+    lines.append("| --- | --- | --- | --- | --- |")
     for suite in report.suites:
         metrics = _metric_summary(suite)
         note = (suite.notes or "").replace("\n", " ")[:180]
         status = suite.status
         if suite.suite_id in stale:
             status = f"{status} (stale)"
-        lines.append(f"| `{suite.suite_id}` | **{status}** | {metrics} | {note} |")
+        lines.append(
+            f"| `{suite.suite_id}` | {suite_tier(suite.suite_id)} | **{status}** | {metrics} | {note} |"
+        )
     present = {s.suite_id for s in report.suites}
-    # Completeness rows: v1 required only. v2 optional suites appear when
+    # Completeness rows: required benches only. Optional benches appear when
     # present on the report; they are not listed as missing (would HOLD
-    # the Grok CLI scorecard forever while stubs skip).
-    required = list(report.admission.required_suites or REQUIRED_SUITE_IDS_V1)
+    # the harness scorecard forever while stubs skip).
+    required = list(report.admission.required_suites or REQUIRED_SUITE_IDS)
     missing = [sid for sid in required if sid not in present]
     for sid in missing:
-        lines.append(f"| `{sid}` | **missing** | — | not yet in this scorecard |")
+        lines.append(
+            f"| `{sid}` | {suite_tier(sid)} | **missing** | — | not yet in this scorecard |"
+        )
     lines.append("")
     for suite in report.suites:
         lines.append(f"## `{suite.suite_id}`")
