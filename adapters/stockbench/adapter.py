@@ -147,6 +147,8 @@ class StockBenchEnvAdapter:
             "--offline",
             "--no-summary-llm",
         ]
+        if proto.universe:
+            cmd.extend(["--symbols", ",".join(proto.universe)])
         env = os.environ.copy()
         key = refresh_xai_api_key()
         if key:
@@ -184,7 +186,8 @@ class StockBenchEnvAdapter:
             if isinstance(v, (int, float))
         ]
         notes = (
-            f"Official StockBench window {proto.date_from}..{proto.date_to} "
+            (f"SMOKE ({proto.extra.get('smoke_sample')}). " if proto.extra.get("smoke") else "")
+            + f"Official StockBench window {proto.date_from}..{proto.date_to} "
             f"universe={len(proto.universe)} dual-agent grok overlay. "
             f"returncode={proc.returncode} metrics={metrics_file}. "
             f"POLYGON/FINNHUB absent; offline_only."

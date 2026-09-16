@@ -64,4 +64,7 @@ class FinMcpEnvAdapterAsBench(EnvAdapterAsBench):
         proto.extra.setdefault("plugin_env", {})
         if sandbox is not None:
             proto.extra["_sandbox"] = sandbox
-        return self.inner.run(harness.as_agent_adapter(), proto)
+        try:
+            return self.inner.run(harness.as_agent_adapter(), proto)
+        finally:
+            proto.extra.pop("_sandbox", None)

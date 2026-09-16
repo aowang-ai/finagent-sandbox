@@ -107,6 +107,21 @@ class OpenPmEnvAdapter:
         )
         if skipped:
             return skipped
+        if proto.extra.get("smoke"):
+            features = self.module_path / "dataset" / "feature_output" / "feature_output.ndjson"
+            size = features.stat().st_size if features.is_file() else 0
+            if size > 1_000_000_000:
+                return skipped_suite(
+                    SUITE_ID,
+                    protocol=proto,
+                    upstream_cli=UPSTREAM_CLI,
+                    notes=(
+                        "skip: smoke; official llm_tiered loads dataset/feature_output/"
+                        f"feature_output.ndjson ({size} bytes) which previously SIGKILL/OOM "
+                        "(~7.3GiB RSS) on this 15GiB host with 0 swap. Date shrink does not "
+                        "avoid the load. Not inventing --max-bars / universe subset."
+                    ),
+                )
         try:
             return self._run_full(proto)
         except Exception as exc:  # noqa: BLE001

@@ -236,14 +236,26 @@ class FinsaberEnvAdapter:
         strategy_cls = _make_strategy_class(agent, BaseStrategyIso)
         setups = proto.extra.get("setups") or list(CLAIMED_SELECTIONS)
         windows = proto.extra.get("windows") or list(CLAIMED_WINDOWS)
+        ticker_filter = {str(t) for t in (proto.extra.get("tickers") or []) if t}
+        smoke = bool(proto.extra.get("smoke"))
         all_metrics: dict[str, Any] = {}
         tickers_used: list[str] = []
         hb_path = artifacts / "heartbeat.json"
         progress_path = artifacts / "progress.jsonl"
         strategy_cls._hb_path = hb_path  # type: ignore[attr-defined]
         n_done = 0
+
+        def _tickers_for(setup: str, window_key: str) -> list[str]:
+            sel_map = CLAIMED_SELECTIONS.get(str(setup)) or {}
+            names = list(sel_map.get(window_key) or [])
+            if ticker_filter:
+                filtered = [t for t in names if t in ticker_filter]
+                if filtered:
+                    return filtered
+            return names
+
         n_total = sum(
-            len(CLAIMED_SELECTIONS[str(s)][w])
+            len(_tickers_for(str(s), w))
             for s in setups
             if str(s) in CLAIMED_SELECTIONS
             for w in windows
@@ -258,7 +270,10 @@ class FinsaberEnvAdapter:
                 if window_key not in CLAIMED_WINDOWS or window_key not in sel:
                     continue
                 date_from, date_to = CLAIMED_WINDOWS[window_key]
-                tickers = list(sel[window_key])
+                if smoke:
+                    date_from = proto.date_from or date_from
+                    date_to = proto.date_to or date_to
+                tickers = _tickers_for(str(setup), window_key)
                 tickers_used.extend(tickers)
                 strategy_cls._hb_meta = {  # type: ignore[attr-defined]
                     "setup": str(setup),
@@ -308,7 +323,7 @@ class FinsaberEnvAdapter:
                     "result_output_dir": str(out_dir),
                     "data_loader": loader,
                     "checkpoint_results": True,
-                    "resume_from_checkpoint": True,
+                    "resume_from_checkpoint": not smoke,
                 }
                 engine = FINSABER(config)
                 # Upstream auto_resolve_params does strat_params.items() with no None-guard.
@@ -369,7 +384,8 @@ class FinsaberEnvAdapter:
             ],
             traces_path=str(artifacts),
             notes=(
-                f"Claimed FINSABER-2 setups {setups} windows {windows} via BaseStrategyIso. "
+                (f"SMOKE ({proto.extra.get('smoke_sample')}). " if smoke else "")
+                + f"Claimed FINSABER-2 setups {setups} windows {windows} via BaseStrategyIso. "
                 f"data_root={data_root}. Honesty gates recorded on this suite only."
             ),
             upstream_cli=UPSTREAM_ENTRY,

@@ -120,6 +120,15 @@ class ValsFinanceAgentEnvAdapter:
         artifacts.mkdir(parents=True, exist_ok=True)
         python = proto.extra.get("python") or repo_venv_python(self.repo_root, VENV_NAME)
         public = self.module_path / "data" / "public.txt"
+        n_q = proto.extra.get("n_questions")
+        if proto.extra.get("smoke"):
+            n_q = int(n_q or 2)
+            lines = [ln for ln in public.read_text(encoding="utf-8").splitlines() if ln.strip()][:n_q]
+            smoke_q = artifacts / "public_smoke.txt"
+            smoke_q.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            public = smoke_q
+            proto.extra["questions"] = str(public)
+            proto.extra["n_questions_public"] = n_q
         model = str(proto.extra.get("model") or f"grok/{DEFAULT_MODEL_API}")
         tools = available_tools()
         proto.extra["tools_enabled"] = list(tools)
@@ -149,8 +158,10 @@ class ValsFinanceAgentEnvAdapter:
             "--model",
             model,
             "--parallelism",
-            str(proto.extra.get("parallelism") or "8"),
+            str(proto.extra.get("parallelism") or ("1" if proto.extra.get("smoke") else "8")),
         ]
+        if proto.extra.get("smoke"):
+            cmd.extend(["--max-turns", str(proto.extra.get("max_turns") or 8)])
         if tools:
             cmd.extend(["--tools", *tools])
         env = xai_env(pythonpath_dirs=[self.module_path, self.repo_root])
@@ -158,7 +169,11 @@ class ValsFinanceAgentEnvAdapter:
         env["OPENAI_BASE_URL"] = "https://api.x.ai/v1"
         proc = run_logged(cmd, cwd=self.module_path, env=env, log_path=log_path)
         results_file = find_results_json(self.module_path, artifacts)
-        harvested = harvest_results(results_file, public, self.module_path)
+        harvested = harvest_results(
+            results_file,
+            public,
+            None if proto.extra.get("smoke") else self.module_path,
+        )
         return suite_from_harvest(
             proto,
             harvested=harvested,

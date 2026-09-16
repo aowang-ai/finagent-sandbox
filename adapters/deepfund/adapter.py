@@ -217,8 +217,9 @@ class DeepFundEnvAdapter:
         harvest_path.write_text(json.dumps(harvested, indent=2, default=str), encoding="utf-8")
         av = "present" if os.environ.get("ALPHA_VANTAGE_API_KEY") else "absent (yfinance price fallback)"
         notes = (
-            f"Chronological DeepFund --local-db {proto.date_from}..{proto.date_to} "
-            f"with OpenAI-compatible Grok YAML. days_ok={n_ok} fail={n_fail}. "
+            (f"SMOKE ({proto.extra.get('smoke_sample')}). " if proto.extra.get("smoke") else "")
+            + f"Chronological DeepFund --local-db {proto.date_from}..{proto.date_to} "
+            f"universe={proto.universe} with OpenAI-compatible Grok YAML. days_ok={n_ok} fail={n_fail}. "
             f"db={db_path}. Supabase not used. ALPHA_VANTAGE_API_KEY={av}."
         )
         arts = [

@@ -192,9 +192,10 @@ class LiveTradeBenchEnvAdapter:
         if models_data.is_file():
             arts.append(Artifact(kind="models_data", path=str(models_data), media_type="application/json"))
         notes = (
-            f"Official examples/backtest_demo.py window {proto.date_from}..{proto.date_to} "
-            f"(demo defaults, not a 1-day invention) exchanges=stock model={model} "
-            f"returncode={proc.returncode}. Live 50-day dual-market not run in-session. "
+            (f"SMOKE ({proto.extra.get('smoke_sample')}). " if proto.extra.get("smoke") else "")
+            + f"Official examples/backtest_demo.py window {proto.date_from}..{proto.date_to} "
+            f"stocks={stocks} exchanges=stock model={model} "
+            f"returncode={proc.returncode}. "
             + tail_text(log_path, 20).replace("\n", " | ")[:400]
         )
         return SuiteResult(

@@ -370,12 +370,15 @@ def suite_from_harvest(
         Metric(name="n_error", value=float(n_fail), source="q*/result.json"),
     ]
     notes = (
-        f"Official public.txt protocol n={n_public} harvested n_finished={n_finished} "
+        (f"SMOKE ({proto.extra.get('smoke_sample')}). " if proto.extra.get("smoke") else "")
+        + f"Official public.txt protocol n={n_public} harvested n_finished={n_finished} "
         f"n_ok={n_ok} n_fail={n_fail} n_inflight={n_inflight} model={model} "
         f"returncode={returncode}. tools_enabled={tools}; tools_skipped={skipped_tools}. "
     )
     if n_finished >= n_public:
-        notes += "CONTINUE complete: unique q*/result.json 50/50 finished. Workers dead; not restarted. "
+        notes += (
+            f"CONTINUE complete: unique q*/result.json {n_finished}/{n_public} finished. "
+        )
     else:
         notes += "Resume remaining public.txt qids (skip terminal result.json). "
     notes += (

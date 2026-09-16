@@ -140,6 +140,11 @@ class FinSearchCompEnvAdapter:
         eval_log = artifacts / "eval.log"
         inner = self.module_path / "finsearchcomp"
         env = xai_env(pythonpath_dirs=[inner, self.module_path, self.repo_root])
+        limit = proto.extra.get("limit")
+        if proto.extra.get("smoke") and limit is None:
+            limit = proto.extra.get("n_questions") or 2
+        if limit is None:
+            limit = 0
         chat_cmd = [
             python,
             str(inner / "chat" / "chat.py"),
@@ -150,7 +155,7 @@ class FinSearchCompEnvAdapter:
             "--output_path",
             str(chat_out),
             "--limit",
-            "0",
+            str(int(limit)),
         ]
         proc_chat = run_logged(chat_cmd, cwd=inner, env=env, log_path=chat_log)
         n_chat = count_chat_rows(chat_out)
@@ -202,10 +207,10 @@ class FinSearchCompEnvAdapter:
         if eval_out.is_file():
             arts.append(Artifact(kind="eval_json", path=str(eval_out), media_type="application/json"))
         notes = (
-            f"Official FinSearchComp chat+eval model={model} "
-            f"chat_rc={proc_chat.returncode} eval_rc={eval_rc} n_chat={n_chat}. "
+            (f"SMOKE ({proto.extra.get('smoke_sample')}). " if proto.extra.get("smoke") else "")
+            + f"Official FinSearchComp chat+eval model={model} "
+            f"chat_rc={proc_chat.returncode} eval_rc={eval_rc} n_chat={n_chat} limit={limit}. "
             "config.yaml pointed at xAI; openai_api AzureOpenAI glue-patched to OpenAI(). "
-            "limit=0 (all questions; documented official flag). "
             + tail_text(eval_log if eval_log.is_file() else chat_log, 12).replace("\n", " | ")[:400]
         )
         return SuiteResult(

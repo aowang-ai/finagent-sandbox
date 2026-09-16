@@ -139,6 +139,12 @@ class FinToolBenchEnvAdapter:
         if not m_path.is_absolute():
             m_path = self.repo_root / m_path
         questions = _load_jsonl(q_path)
+        n_q = proto.extra.get("n_questions")
+        if proto.extra.get("smoke") and not isinstance(n_q, int):
+            n_q = 2
+        if isinstance(n_q, int) and 0 < n_q < len(questions):
+            questions = questions[:n_q]
+        proto.extra["n_questions"] = len(questions)
         tools = _load_jsonl(m_path)
         compact = [
             {
@@ -272,7 +278,8 @@ class FinToolBenchEnvAdapter:
                 )
         status = SuiteStatus.PASS.value if n_with_tools else SuiteStatus.FAIL.value
         notes = (
-            f"Full question set n={len(rows)} tool_calls={n_with_tools}. "
+            (f"SMOKE ({proto.extra.get('smoke_sample')}). " if proto.extra.get("smoke") else "")
+            + f"Question set n={len(rows)} tool_calls={n_with_tools}. "
             "RapidAPI/akshare not subscribed — tool outputs are Grok-produced. "
             + eval_notes
         )

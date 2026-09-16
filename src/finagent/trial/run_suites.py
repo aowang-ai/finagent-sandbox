@@ -234,6 +234,7 @@ def run_suites(
     dry: bool = False,
     report_only: bool = False,
     backend: str | None = None,
+    smoke: bool = False,
 ) -> int:
     os.chdir(ROOT)
     os.environ["PYTHONUNBUFFERED"] = "1"
@@ -308,13 +309,27 @@ def run_suites(
         proto: ProtocolSpec = ProtocolFactory.create(sid)
         proto.extra = dict(proto.extra)
         proto.extra["execute"] = not dry
-        proto.extra["artifacts_dir"] = str(ROOT / "artifacts" / sid.split(".")[0])
         proto.extra["harness_name"] = harness.name()
         if sid in OPTIONAL_VENV:
             proto.extra["python"] = repo_venv_python(ROOT, OPTIONAL_VENV[sid])
         else:
             proto.extra["python"] = default_eval_python()
-        print(f"=== {sid} execute={proto.extra['execute']} python={proto.extra['python']} ===", flush=True)
+        art_root = ROOT / "artifacts" / sid.split(".")[0]
+        if smoke:
+            from finagent.trial.smoke import apply_smoke_protocol
+
+            apply_smoke_protocol(proto)
+            proto.extra["execute"] = not dry
+            proto.extra["python"] = proto.extra.get("python") or default_eval_python()
+            proto.extra["artifacts_dir"] = str(art_root / "smoke")
+        else:
+            proto.extra["artifacts_dir"] = str(art_root)
+        sample = proto.extra.get("smoke_sample") if smoke else ""
+        print(
+            f"=== {sid} execute={proto.extra['execute']} python={proto.extra['python']}"
+            f"{' smoke=' + sample if smoke else ''} ===",
+            flush=True,
+        )
         try:
             if sid not in seated:
                 result = skipped_suite(
@@ -353,6 +368,8 @@ def run_suites(
                 notes=f"orchestrator caught: {exc}",
             )
             blockers.append(f"{sid}: {exc}")
+        if result.protocol is not None:
+            result.protocol.extra.pop("_sandbox", None)
         dump_suite(result, harness_name=harness_name)
         results = [s for s in results if s.suite_id != sid] + [result]
         completed.append(f"{sid} status={result.status}")
@@ -361,6 +378,7 @@ def run_suites(
                 "Parallel scorecard for Grok CLI. Required benches drive completeness; "
                 "optional benches skip if deps are missing. Per-suite pass/fail is not a veto. "
                 f"backend={backend or ''} model={harness.version()}."
+                + (" SMOKE: tiny official samples (same entrypoints)." if smoke else "")
             )
         else:
             card_notes = (
@@ -396,6 +414,11 @@ def cli_main(
         help="all|required (default completeness set), optional, or comma list of ids/aliases",
     )
     parser.add_argument("--dry", action="store_true", help="do not execute engines")
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="tiny official samples (dates/universe/--limit/n_questions); same entrypoints",
+    )
     parser.add_argument("--report-only", action="store_true")
     parser.add_argument("--backend", default=os.environ.get("GROK_EVAL_BACKEND", "api"))
     args = parser.parse_args(argv)
@@ -407,4 +430,5 @@ def cli_main(
         dry=args.dry,
         report_only=args.report_only,
         backend=args.backend,
+        smoke=bool(args.smoke),
     )

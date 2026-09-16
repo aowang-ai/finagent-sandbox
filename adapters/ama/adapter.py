@@ -230,7 +230,8 @@ class AmaEnvAdapter:
         agg = _aggregate(per_asset_metrics)
         status = SuiteStatus.PASS.value if n_ok > 0 else SuiteStatus.FAIL.value
         notes = (
-            f"Full AMA window {proto.date_from}..{proto.date_to} on {len(proto.universe)} assets. "
+            (f"SMOKE ({proto.extra.get('smoke_sample')}). " if proto.extra.get("smoke") else "")
+            + f"AMA window {proto.date_from}..{proto.date_to} on {len(proto.universe)} assets. "
             f"HTTP calls {n_ok}/{n_calls}. News vendor keys missing — prices from Yahoo, news empty. "
             f"Server {url}."
         )

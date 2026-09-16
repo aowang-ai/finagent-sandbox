@@ -64,6 +64,8 @@ def dump_suite(
         repo_root=repo_root,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
+    if result.protocol is not None:
+        result.protocol.extra.pop("_sandbox", None)
     path.write_text(json.dumps(asdict(result), default=str, indent=2), encoding="utf-8")
     return path
 
