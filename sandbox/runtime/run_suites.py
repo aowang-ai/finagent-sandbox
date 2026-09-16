@@ -1,0 +1,468 @@
+"""Shared eval loop for scripts/run_eval.py and scripts/run_grok_cli_eval.py.
+
+Harness construction goes through HarnessFactory. Benches and protocols
+go through BenchFactory / ProtocolFactory. Dumps write under
+artifacts/suite_results/<harness>/. A harness that cannot sit a bench skips
+(not HOLD-fill).
+"""
+
+from __future__ import annotations
+
+import argparse
+import asyncio
+import os
+import sys
+import traceback
+import uuid
+from datetime import datetime, timezone
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+VENV_PYTHON = Path("/workspace/finance-agent-p0/FINSABER/.venv/bin/python")
+
+
+def default_eval_python() -> str:
+    env = os.environ.get("EVAL_PYTHON")
+    if env:
+        return env
+    if VENV_PYTHON.is_file():
+        return str(VENV_PYTHON)
+    local = ROOT / ".venv" / "bin" / "python"
+    if local.is_file():
+        return str(local)
+    return sys.executable
+
+
+def ensure_eval_python() -> None:
+    """Re-exec under the FINSABER venv so in-process suites (pandas, langchain) import."""
+
+    wanted = Path(default_eval_python()).resolve()
+    current = Path(sys.executable).resolve()
+    if wanted == current or not wanted.is_file():
+        return
+    os.environ.setdefault("EVAL_PYTHON", str(wanted))
+    os.execv(str(wanted), [str(wanted), *sys.argv])
+
+
+from adapters.base import (
+    PLANNED_SUITE_IDS_V2,
+    REQUIRED_SUITE_IDS_V1,
+    AgentIdentity,
+    ProtocolSpec,
+    SuiteResult,
+    SuiteStatus,
+    compose_acceptance_report,
+    skipped_suite,
+)
+from adapters.v2_runtime import repo_venv_python
+from runners.scorecard import write_scorecard
+from sandbox.benches.factory import BenchFactory, ProtocolFactory, SUITE_ALIASES
+from sandbox.harness.factory import HarnessFactory
+from sandbox.runtime.dumps import dump_suite, load_suite
+
+V2_VENV = {
+    "investorbench.decision": "v2_investor",
+    "livetradebench.live": "v2_livetrade",
+    "finmcp.tool_mcp": "v2_finmcp",
+    "vals_finance_agent.research": "v2_vals",
+    "finsearchcomp.search": "v2_finsearch",
+    "openpm.portfolio_pit": "v2_openpm",
+}
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _suite_status_on_disk(sid: str, *, harness_name: str = "grok-cli") -> str | None:
+    loaded = load_suite(sid, harness_name=harness_name)
+    if loaded is None:
+        return None
+    return str(loaded.status) if loaded.status else None
+
+
+def _morning_ready_stamp(*, harness_name: str = "grok-cli") -> str:
+    """Morning-ready only when every v1 required suite has a non-error SuiteResult."""
+
+    for sid in REQUIRED_SUITE_IDS_V1:
+        st = _suite_status_on_disk(sid, harness_name=harness_name)
+        if st is None or st == SuiteStatus.ERROR.value:
+            return "not yet"
+    return "yes"
+
+
+def _remaining_suite_ids(*, harness_name: str = "grok-cli") -> list[str]:
+    leftover: list[str] = []
+    for sid in REQUIRED_SUITE_IDS_V1:
+        st = _suite_status_on_disk(sid, harness_name=harness_name)
+        if st is None or st == SuiteStatus.ERROR.value:
+            leftover.append(f"{sid} ({st or 'missing'})")
+    return leftover
+
+
+def write_status(
+    *,
+    live: str,
+    completed: list[str],
+    blockers: list[str],
+    next_action: str,
+    errored: list[str] | None = None,
+    harness_name: str = "grok-cli",
+) -> None:
+    status_dir = ROOT / "status"
+    status_dir.mkdir(parents=True, exist_ok=True)
+    path = status_dir / "eval.md"
+    completed_txt = "\n".join(f"- {c}" for c in completed) or "- (none yet)"
+    blockers_txt = "\n".join(f"- {b}" for b in blockers) or "- (none yet)"
+    if errored is None:
+        errored = [
+            c
+            for c in completed
+            if "status=error" in c or "(cached error)" in c
+        ]
+    leftover = _remaining_suite_ids(harness_name=harness_name)
+    morning = _morning_ready_stamp(harness_name=harness_name)
+    if leftover and morning != "yes":
+        next_action = (
+            next_action.rstrip(".")
+            + f"; remaining non-error suites still needed: {', '.join(leftover)}. "
+            "Do not stamp morning-ready. Prefer scripts/run_remaining_suites.sh "
+            "once finsaber.long_horizon is pass/fail/skip and its eval PID is gone."
+        )
+        if "idle" in live.lower():
+            live = f"orchestrator subset finished; remaining: {', '.join(leftover)}"
+    errored_txt = "\n".join(f"- {c}" for c in errored) or "- (none)"
+    leftover_txt = "\n".join(f"- {c}" for c in leftover) or "- (none)"
+    path.write_text(
+        "# Overnight status\n\n"
+        f"Updated: {utc_now()}\n"
+        "Mandate: Bot supervises; Grok CLI implements full GOAL.md overnight.\n"
+        "Scoring: **parallel scorecard — no FINSABER admission kernel veto.**\n\n"
+        "## Live\n\n"
+        f"- {live}\n\n"
+        "## Completed\n\n"
+        f"{completed_txt}\n\n"
+        "## Errored\n\n"
+        f"{errored_txt}\n\n"
+        "## Remaining (error or missing SuiteResult)\n\n"
+        f"{leftover_txt}\n\n"
+        "## Blockers (documented; do not idle)\n\n"
+        f"{blockers_txt}\n\n"
+        "## Next action\n\n"
+        f"- {next_action}\n"
+        f"- morning-ready: {morning}\n",
+        encoding="utf-8",
+    )
+    prog = status_dir / "progress.md"
+    prog.write_text(
+        "# Progress\n\n"
+        f"Updated: {utc_now()}\n\n"
+        f"- live: {live}\n"
+        f"- completed: {', '.join(completed) or 'none'}\n"
+        f"- errored: {', '.join(errored) or 'none'}\n"
+        f"- remaining: {', '.join(leftover) or 'none'}\n"
+        f"- next: {next_action}\n"
+        f"- morning-ready: {morning}\n",
+        encoding="utf-8",
+    )
+
+
+def _scorecard_names(harness_name: str) -> tuple[str, str | None, str, str]:
+    """v1 runner_name, v1 md override, v2 runner_name, v2 md name.
+
+    v2 composition stays Grok-only for GROK_CLI_SCORECARD_V2. Other harnesses
+    get their own files and must never write the Grok scorecards.
+    """
+
+    if harness_name == "grok-cli":
+        return "GROK_CLI", None, "GROK_CLI_V2", "GROK_CLI_SCORECARD_V2.md"
+    stem = harness_name.upper().replace("-", "_")
+    return stem, None, f"{stem}_V2", f"{stem}_SCORECARD_V2.md"
+
+
+def compose_and_write(suites: list[SuiteResult], notes: str, *, harness_name: str = "grok-cli") -> None:
+    """Write the v1 scorecard from v1 required suites only."""
+
+    v1 = [s for s in suites if s.suite_id in REQUIRED_SUITE_IDS_V1]
+    if not v1:
+        return
+    runner_name, md_name, _, _ = _scorecard_names(harness_name)
+    report = compose_acceptance_report(
+        AgentIdentity(agent_id=harness_name, name=harness_name, version="overnight"),
+        v1,
+        report_id=str(uuid.uuid4()),
+        notes=notes,
+        required_suites=REQUIRED_SUITE_IDS_V1,
+    )
+    write_scorecard(
+        report,
+        repo_root=ROOT,
+        runner_name=runner_name,
+        md_name=md_name,
+    )
+
+
+def compose_and_write_v2(suites: list[SuiteResult], notes: str, *, harness_name: str = "grok-cli") -> None:
+    """Write the v2 scorecard from planned v2 suites only. Never touch v1 files.
+
+    GROK_CLI_SCORECARD_V2 is Grok-only.
+    """
+
+    v2 = [s for s in suites if s.suite_id in PLANNED_SUITE_IDS_V2]
+    if not v2:
+        return
+    _, _, runner_name, md_name = _scorecard_names(harness_name)
+    json_name = md_name.replace(".md", ".json") if md_name else None
+    report = compose_acceptance_report(
+        AgentIdentity(agent_id=harness_name, name=harness_name, version="v2-real-runs"),
+        v2,
+        report_id=str(uuid.uuid4()),
+        notes=notes,
+        required_suites=PLANNED_SUITE_IDS_V2,
+    )
+    write_scorecard(
+        report,
+        repo_root=ROOT,
+        runner_name=runner_name,
+        md_name=md_name,
+        json_name=json_name,
+    )
+
+
+def _resolve_wanted(suites_arg: str) -> list[str]:
+    if suites_arg == "all":
+        return list(REQUIRED_SUITE_IDS_V1)
+    if suites_arg.strip() == "v2":
+        return list(PLANNED_SUITE_IDS_V2)
+    return [SUITE_ALIASES.get(s.strip(), s.strip()) for s in suites_arg.split(",") if s.strip()]
+
+
+def run_suites(
+    *,
+    harness_name: str = "grok-cli",
+    suites: str = "all",
+    dry: bool = False,
+    report_only: bool = False,
+    backend: str | None = None,
+) -> int:
+    os.chdir(ROOT)
+    os.environ["PYTHONUNBUFFERED"] = "1"
+
+    if harness_name == "grok-cli":
+        from runners.grok import refresh_xai_api_key
+
+        refresh_xai_api_key(force=True)
+
+    wanted = _resolve_wanted(suites)
+    unknown = [sid for sid in wanted if sid not in BenchFactory._MAP]
+    if unknown:
+        print("unknown suite id(s):", ", ".join(unknown))
+        print("known:", ", ".join(BenchFactory._MAP))
+        print("aliases:", ", ".join(sorted(SUITE_ALIASES)))
+        return 2
+
+    if report_only:
+        v1_wanted = [sid for sid in wanted if sid in REQUIRED_SUITE_IDS_V1]
+        v2_wanted = [sid for sid in wanted if sid in PLANNED_SUITE_IDS_V2]
+        if not v1_wanted and not v2_wanted:
+            if suites.strip() == "v2":
+                v2_wanted = list(PLANNED_SUITE_IDS_V2)
+            else:
+                v1_wanted = list(REQUIRED_SUITE_IDS_V1)
+        wrote = False
+        if v1_wanted:
+            v1_suites: list[SuiteResult] = []
+            for sid in REQUIRED_SUITE_IDS_V1:
+                loaded = load_suite(sid, harness_name=harness_name)
+                if loaded:
+                    v1_suites.append(loaded)
+            if v1_suites:
+                compose_and_write(
+                    v1_suites,
+                    notes="recomposed from artifacts/suite_results",
+                    harness_name=harness_name,
+                )
+                print("wrote reports/GROK_CLI_SCORECARD.md" if harness_name == "grok-cli" else f"wrote {harness_name} v1 scorecard")
+                wrote = True
+        if v2_wanted or suites.strip() == "v2":
+            v2_suites: list[SuiteResult] = []
+            for sid in PLANNED_SUITE_IDS_V2:
+                loaded = load_suite(sid, harness_name=harness_name)
+                if loaded:
+                    v2_suites.append(loaded)
+            if v2_suites:
+                compose_and_write_v2(
+                    v2_suites,
+                    notes=(
+                        "V2 parallel scorecard recomposed from artifacts/suite_results. "
+                        "Never overwrites GROK_CLI_SCORECARD.*."
+                    ),
+                    harness_name=harness_name,
+                )
+                print(
+                    "wrote reports/GROK_CLI_SCORECARD_V2.md"
+                    if harness_name == "grok-cli"
+                    else f"wrote {harness_name} v2 scorecard"
+                )
+                wrote = True
+        if not wrote:
+            print("no suite_results to compose")
+            return 1
+        return 0
+
+    artifacts_dir = ROOT / "artifacts" / ("grok_cli" if harness_name == "grok-cli" else harness_name)
+    harness = HarnessFactory.create(
+        harness_name,
+        backend=backend,
+        artifacts_dir=artifacts_dir,
+    )
+    seated = harness.suite_ids()
+    completed: list[str] = []
+    blockers: list[str] = []
+    results: list[SuiteResult] = []
+    v2_results: list[SuiteResult] = []
+
+    for sid in REQUIRED_SUITE_IDS_V1:
+        if sid in wanted:
+            continue
+        loaded = load_suite(sid, harness_name=harness_name)
+        if loaded:
+            results.append(loaded)
+            completed.append(f"{sid} (cached {loaded.status})")
+
+    for sid in PLANNED_SUITE_IDS_V2:
+        if sid in wanted:
+            continue
+        loaded = load_suite(sid, harness_name=harness_name)
+        if loaded:
+            v2_results.append(loaded)
+
+    for sid in wanted:
+        if harness_name == "grok-cli":
+            from runners.grok import refresh_xai_api_key
+
+            refresh_xai_api_key(force=False)
+        write_status(
+            live=f"running {sid}",
+            completed=completed,
+            blockers=blockers,
+            next_action=f"finish {sid} then continue",
+            harness_name=harness_name,
+        )
+        proto: ProtocolSpec = ProtocolFactory.create(sid)
+        proto.extra = dict(proto.extra)
+        proto.extra["execute"] = not dry
+        proto.extra["artifacts_dir"] = str(ROOT / "artifacts" / sid.split(".")[0])
+        proto.extra["harness_name"] = harness.name()
+        if sid in V2_VENV:
+            proto.extra["python"] = repo_venv_python(ROOT, V2_VENV[sid])
+        else:
+            proto.extra["python"] = default_eval_python()
+        print(f"=== {sid} execute={proto.extra['execute']} python={proto.extra['python']} ===", flush=True)
+        try:
+            if sid not in seated:
+                result = skipped_suite(
+                    sid,
+                    protocol=proto,
+                    notes=(
+                        f"harness {harness.name()!r} suite_ids={sorted(seated) or '∅'} "
+                        f"does not sit {sid}; skip (not HOLD-fill)"
+                    ),
+                )
+            else:
+                bench = BenchFactory.create(sid, repo_root=ROOT)
+                if getattr(bench, "opt_in_sandbox", False):
+                    from sandbox.runtime.config import TrialConfig
+                    from sandbox.runtime.trial import Trial
+
+                    cfg = TrialConfig(
+                        harness=harness_name,
+                        suite_id=sid,
+                        sandbox_type="local-process",
+                        plugins=list(getattr(bench, "default_plugins", ()) or ()),
+                        protocol=proto,
+                        execute=bool(proto.extra.get("execute")),
+                        artifacts_dir=str(proto.extra.get("artifacts_dir") or ""),
+                        python=str(proto.extra.get("python") or "") or None,
+                    )
+                    result = asyncio.run(Trial(cfg, repo_root=ROOT, harness=harness).run())
+                else:
+                    result = bench.run_official(harness, proto, sandbox=None)
+        except Exception as exc:  # noqa: BLE001
+            traceback.print_exc()
+            result = SuiteResult(
+                suite_id=sid,
+                status=SuiteStatus.ERROR.value,
+                protocol=proto,
+                notes=f"orchestrator caught: {exc}",
+            )
+            blockers.append(f"{sid}: {exc}")
+        dump_suite(result, harness_name=harness_name)
+        results = [s for s in results if s.suite_id != sid] + [result]
+        v2_results = [s for s in v2_results if s.suite_id != sid] + (
+            [result] if result.suite_id in PLANNED_SUITE_IDS_V2 else []
+        )
+        completed.append(f"{sid} status={result.status}")
+        if any(w in REQUIRED_SUITE_IDS_V1 for w in wanted):
+            if harness_name == "grok-cli":
+                v1_notes = (
+                    "Parallel scorecard for Grok CLI. Per-suite pass/fail is not a veto. "
+                    f"backend={backend or ''} model={harness.version()}."
+                )
+            else:
+                v1_notes = (
+                    f"Parallel scorecard for {harness_name}. Per-suite pass/fail is not a veto."
+                )
+            compose_and_write(results, notes=v1_notes, harness_name=harness_name)
+        if any(w in PLANNED_SUITE_IDS_V2 for w in wanted):
+            if harness_name == "grok-cli":
+                v2_notes = (
+                    "V2 parallel scorecard for Grok CLI. Official protocols only; "
+                    "skip names missing key/data/service. Never overwrites GROK_CLI_SCORECARD.*. "
+                    f"backend={backend or ''} model={harness.version()}."
+                )
+            else:
+                v2_notes = (
+                    f"V2 parallel scorecard for {harness_name}. "
+                    "Never overwrites GROK_CLI_SCORECARD.*."
+                )
+            compose_and_write_v2(v2_results, notes=v2_notes, harness_name=harness_name)
+        print(f"=== {sid} -> {result.status} ===", flush=True)
+        print(f"[v2] {sid} notes={(result.notes or '')[:240]}", flush=True)
+
+    write_status(
+        live="idle (orchestrator finished requested suites)",
+        completed=completed,
+        blockers=blockers,
+        next_action="read reports/GROK_CLI_SCORECARD.md; resume unfinished suites if any",
+        harness_name=harness_name,
+    )
+    return 0
+
+
+def cli_main(
+    argv: list[str] | None = None,
+    *,
+    default_harness: str = "grok-cli",
+    expose_harness_flag: bool = True,
+) -> int:
+    parser = argparse.ArgumentParser(description="Finance-agent eval (shared run_suites)")
+    if expose_harness_flag:
+        parser.add_argument("--harness", default=default_harness, help="registry key (default grok-cli)")
+    parser.add_argument("--suites", default="all", help="comma list or all")
+    parser.add_argument("--dry", action="store_true", help="do not execute engines")
+    parser.add_argument("--report-only", action="store_true")
+    parser.add_argument("--backend", default=os.environ.get("GROK_EVAL_BACKEND", "api"))
+    args = parser.parse_args(argv)
+    ensure_eval_python()
+    harness_name = args.harness if expose_harness_flag else default_harness
+    return run_suites(
+        harness_name=harness_name,
+        suites=args.suites,
+        dry=args.dry,
+        report_only=args.report_only,
+        backend=args.backend,
+    )

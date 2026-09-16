@@ -1,0 +1,55 @@
+# Secrets and local env
+.env
+.env.*
+!.env.example
+
+# Python
+**/.venv/
+**/venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/.pytest_cache/
+**/*.egg-info/
+**/.cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.ipynb_checkpoints/
+
+# Nested module data / outputs (never commit, even if modules are vendored)
+**/*.parquet
+**/*.pkl
+**/*.pickle
+**/backtest/output/
+modules/stockbench/storage/
+modules/ama/testbed/data/
+modules/ama/testbed/action/
+modules/ama/testbed/cache/
+modules/finsaber/backtest/output/
+modules/deepfund/src/assets/
+modules/deepfund/**/*.db
+modules/fintoolbench/data/result/
+modules/fintoolbench/data/eval/
+modules/fintoolbench/logs/
+
+# Modules are cloned by scripts/clone_modules.sh, not committed.
+# Nested .git dirs inside modules/ must never be added.
+modules/*
+!modules/README.md
+!modules/.gitkeep
+
+# Local runtime / session
+logs/
+status/
+venvs/
+.grok/
+artifacts/
+reports/*
+!reports/.gitkeep
+!reports/GROK_CLI_SCORECARD.md
+!reports/GROK_CLI_SCORECARD.json
+!reports/GROK_CLI_SCORECARD_V2.md
+!reports/GROK_CLI_SCORECARD_V2.json
+acceptance_reports/
+*.sock
+*.pid
