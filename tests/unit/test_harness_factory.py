@@ -7,8 +7,8 @@ import unittest
 from pathlib import Path
 
 from adapters.base import ALL_SUITE_IDS, skipped_suite
-from sandbox.harness.factory import HarnessFactory
-from sandbox.runtime.dumps import dump_suite, legacy_path, load_suite, namespaced_path
+from finagent.harness.factory import HarnessFactory
+from finagent.trial.dumps import dump_suite, legacy_path, load_suite, namespaced_path
 
 
 class HarnessFactoryTests(unittest.TestCase):
@@ -31,7 +31,7 @@ class HarnessFactoryTests(unittest.TestCase):
         self.assertEqual(list(HarnessFactory._MAP), ["grok-cli"])
         self.assertEqual(
             HarnessFactory._MAP["grok-cli"],
-            "sandbox.harness.grok_cli:GrokCliHarness",
+            "finagent.harness.grok_cli:GrokCliHarness",
         )
 
 

@@ -10,6 +10,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
 
+[project.scripts]
+finagent-eval = "finagent.cli:main"
+
 [tool.setuptools.packages.find]
-include = ["adapters*", "runners*", "sandbox*"]
-exclude = ["modules*", "scripts*", "docs*"]
+where = ["src", "."]
+include = ["finagent*", "adapters*"]
+exclude = ["modules*", "scripts*", "docs*", "tests*", "cli*"]

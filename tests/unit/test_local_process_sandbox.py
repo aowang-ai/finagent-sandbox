@@ -8,8 +8,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from sandbox.provider.factory import SandboxFactory
-from sandbox.provider.local_process import LocalProcessSandbox
+from finagent.provider.factory import SandboxFactory
+from finagent.provider.local_process import LocalProcessSandbox
 
 
 class LocalProcessSandboxTests(unittest.TestCase):

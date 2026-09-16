@@ -67,49 +67,55 @@ cp .env.example .env
 ./scripts/doctor.sh
 
 # 4. Dry run through HarnessFactory (skip-path; no engines)
-PYTHONPATH=. python scripts/run_eval.py --harness grok-cli --dry
+PYTHONPATH=src:. python -m finagent.cli --harness grok-cli --dry
 ```
 
-Doctor checks that **required** modules exist (fail if missing), **warns** if optional clones are absent, compiles `adapters/` + `sandbox/` factories, parses `ACCEPTANCE_REPORT.schema.json`, and runs a dummy `AgentAdapter` through the required five + optional six (dry skip). Expected admission on required stubs: **HOLD** (scorecard incomplete). A FINSABER fail does not veto other suites.
+Doctor checks that **required** modules exist (fail if missing), **warns** if optional clones are absent, compiles `adapters/` + `src/finagent/` factories, parses `ACCEPTANCE_REPORT.schema.json`, and runs a dummy `AgentAdapter` through the required five + optional six (dry skip). Expected admission on required stubs: **HOLD** (scorecard incomplete). A FINSABER fail does not veto other suites.
 
 Executed scorecards are **generated artifacts**, not vendored in this skeleton. After a real run:
 
 ```bash
 # optional: skip-path smoke of required adapters
-PYTHONPATH=. python scripts/run_eval.py --harness grok-cli --dry
+PYTHONPATH=src:. python -m finagent.cli --harness grok-cli --dry
 
 # optional: recompose an on-disk scorecard (no suite re-run, no LLM)
-PYTHONPATH=. python scripts/run_eval.py --harness grok-cli --report-only
+PYTHONPATH=src:. python -m finagent.cli --harness grok-cli --report-only
 
 # optional-suite harvest / progress (same GROK_CLI_SCORECARD, tier=optional)
-python scripts/v2_suite_ops.py progress
-python scripts/v2_suite_ops.py harvest
+PYTHONPATH=src:. python cli/optional_suite_ops.py progress
+PYTHONPATH=src:. python cli/optional_suite_ops.py harvest
 ```
 
-`scripts/run_grok_cli_eval.py` is a thin alias for `run_eval.py --harness grok-cli`. New dumps go under `artifacts/suite_results/<harness>/`. Do **not** wipe `reports/GROK_CLI_SCORECARD.*` if you generate them locally.
+`cli/run_grok_cli_eval.py` is a thin alias for `run_eval.py --harness grok-cli`. New dumps go under `artifacts/suite_results/<harness>/`. Do **not** wipe `reports/GROK_CLI_SCORECARD.*` if you generate them locally.
 
 FINSABER parquet: set `FINSABER_DATA_ROOT` to a directory that contains `price_daily/`.
 
 ## Repo layout
 
 ```
-sandbox/                       HarnessFactory / BenchFactory / PluginFactory + runtime
-adapters/                      AgentAdapter / EnvAdapter contracts + per-module adapters
-runners/                       Grok runner, AMA HTTP shim, protocols, scorecard writer
+src/finagent/harness/          HarnessFactory + GrokCliHarness + GrokRunner
+src/finagent/provider/         SandboxFactory / LocalProcessSandbox
+src/finagent/plugins/          PluginFactory / McpPlugin
+src/finagent/trial/            Trial, run_suites, dumps, config
+src/finagent/scorecard/        SuiteResult / AcceptanceReport / write_scorecard
+src/finagent/benches/          BenchFactory wrapping adapters/*
+src/finagent/cli.py            python -m finagent.cli
+adapters/<bench>/              one package per bench (EnvAdapter + optional ops)
+cli/run_eval.py                same eval entry as python -m finagent.cli
+cli/optional_suite_ops.py      optional-suite progress / harvest / resume
 scripts/clone_modules.sh       idempotent shallow clone into modules/
 scripts/doctor.sh              structural health check (no secrets)
-scripts/run_eval.py            generic eval entry (`--harness`)
-scripts/run_grok_cli_eval.py   alias: run_eval --harness grok-cli
 ACCEPTANCE_REPORT.schema.json
-docs/paper/                    Harbor norms, sandbox design, migration plan
-docs/product/POSITIONING.md    admission infra vs public leaderboards
-docs/engineering/              compose glue + optional suite status
+docs/                          GOAL, ARCHITECTURE, MODULES, STATUS + paper/product
 CONTRIBUTING.md                how to register a harness / bench / plugin
 modules/                       gitignored clones (README + .gitkeep are tracked)
 reports/                       generate scorecards here; skeleton ships .gitkeep only
 ```
 
-Locked policy: [`GOAL.md`](GOAL.md). Adapter contracts: [`ARCHITECTURE.md`](ARCHITECTURE.md). Product vs Paradoox / Vals / Patronus: [`docs/product/POSITIONING.md`](docs/product/POSITIONING.md).
+Single eval entry: `python -m finagent.cli` (console script `finagent-eval`). `cli/run_eval.py` is the same entry as a script. `cli/run_grok_cli_eval.py` is a thin alias that hides `--harness`.
+
+Locked policy: [`docs/GOAL.md`](docs/GOAL.md). Adapter contracts: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Product vs Paradoox / Vals / Patronus: [`docs/product/POSITIONING.md`](docs/product/POSITIONING.md).
+
 
 ## License
 

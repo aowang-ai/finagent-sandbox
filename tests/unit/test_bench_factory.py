@@ -12,9 +12,9 @@ from adapters.base import (
 )
 from adapters.finsaber import FinsaberEnvAdapter
 from adapters.stockbench import StockBenchEnvAdapter
-from sandbox.benches.factory import BenchFactory, ProtocolFactory, SUITE_ALIASES
-from sandbox.benches.wrap import EnvAdapterAsBench
-from sandbox.runtime.run_suites import _resolve_wanted
+from finagent.benches.factory import BenchFactory, ProtocolFactory, SUITE_ALIASES
+from finagent.benches.wrap import EnvAdapterAsBench
+from finagent.trial.run_suites import _resolve_wanted
 
 
 class BenchFactoryTests(unittest.TestCase):

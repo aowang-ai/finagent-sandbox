@@ -9,10 +9,11 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
+for p in (ROOT / "src", ROOT):
+    if str(p) not in sys.path:
+        sys.path.insert(0, str(p))
 
-from runners.grok import (  # noqa: E402
+from finagent.harness.grok import (  # noqa: E402
     AUTH_JSON,
     _auth_record,
     _ttl_seconds,

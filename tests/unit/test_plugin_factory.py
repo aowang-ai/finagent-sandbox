@@ -11,16 +11,16 @@ from pathlib import Path
 from unittest.mock import patch
 
 from adapters.base import Decision, Observation, ProtocolSpec
-from sandbox.benches.factory import BenchFactory
-from sandbox.benches.wrap import EnvAdapterAsBench, FinMcpEnvAdapterAsBench
-from sandbox.plugins.factory import PluginFactory
-from sandbox.plugins.mcp import McpPlugin
-from sandbox.provider.base import ExecResult
-from sandbox.runtime.config import TrialConfig
-from sandbox.runtime.trial import Trial
+from finagent.benches.factory import BenchFactory
+from finagent.benches.wrap import EnvAdapterAsBench, FinMcpEnvAdapterAsBench
+from finagent.plugins.factory import PluginFactory
+from finagent.plugins.mcp import McpPlugin
+from finagent.provider.base import ExecResult
+from finagent.trial.config import TrialConfig
+from finagent.trial.trial import Trial
 
 ROOT = Path(__file__).resolve().parents[2]
-MCP_PY = ROOT / "sandbox" / "plugins" / "mcp.py"
+MCP_PY = ROOT / "src" / "finagent" / "plugins" / "mcp.py"
 FINMCP_TIR = ROOT / "modules" / "finmcp" / "DianJin-TIR"
 FINMCP_BENCH = FINMCP_TIR / "Benchmark" / "benchmark_final.json"
 
@@ -52,7 +52,7 @@ class RecordingSandbox:
 class PluginFactoryTests(unittest.TestCase):
     def test_map_registers_mcp_only(self) -> None:
         self.assertEqual(list(PluginFactory._MAP), ["mcp"])
-        self.assertEqual(PluginFactory._MAP["mcp"], "sandbox.plugins.mcp:McpPlugin")
+        self.assertEqual(PluginFactory._MAP["mcp"], "finagent.plugins.mcp:McpPlugin")
         plugin = PluginFactory.create("mcp")
         self.assertIsInstance(plugin, McpPlugin)
         self.assertEqual(plugin.name(), "mcp")
@@ -72,7 +72,7 @@ class PluginFactoryTests(unittest.TestCase):
             elif isinstance(node, ast.Import):
                 imported.extend(a.name for a in node.names)
         self.assertFalse(any("harness" in m for m in imported), imported)
-        self.assertFalse(any("sandbox.harness" in m for m in imported), imported)
+        self.assertFalse(any("finagent.harness" in m for m in imported), imported)
         writes = [n for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr in {"write_text", "write_bytes"}]
         self.assertEqual(writes, [])
         sig = inspect.signature(McpPlugin.mount)
@@ -140,7 +140,7 @@ class FinMcpWrapTests(unittest.TestCase):
                     },
                 },
             )
-            with patch("runners.grok.refresh_xai_api_key", return_value="test-key"):
+            with patch("finagent.harness.grok.refresh_xai_api_key", return_value="test-key"):
                 result = bench.run_official(DummyHarness(), proto, sandbox=fake)
         self.assertTrue(fake.calls, msg=f"exec_sync not called; status={result.status} notes={result.notes}")
         joined = " ".join(" ".join(c["argv"]) for c in fake.calls)

@@ -1,6 +1,6 @@
 # Optional suite status
 
-Locked coverage: [`GOAL.md`](../../GOAL.md). Completeness (`admission.decision`) for the Grok CLI product scorecard uses the **required five** (`REQUIRED_SUITE_IDS`). Optional ids live in `OPTIONAL_SUITE_IDS` and appear on the same `reports/GROK_CLI_SCORECARD.*` with `tier=optional`. They do not HOLD promote.
+Locked coverage: [`GOAL.md`](../GOAL.md). Completeness (`admission.decision`) for the Grok CLI product scorecard uses the **required five** (`REQUIRED_SUITE_IDS`). Optional ids live in `OPTIONAL_SUITE_IDS` and appear on the same `reports/GROK_CLI_SCORECARD.*` with `tier=optional`. They do not HOLD promote.
 
 Clone with `./scripts/clone_modules.sh`. Doctor **warns** (does not fail) if an optional module is absent.
 
@@ -17,7 +17,7 @@ Historical required `SuiteResult`s and `reports/GROK_CLI_SCORECARD.*` metric val
 | `openpm.portfolio_pit` | **skip** | `python -m agents.portfolio --provider llm_tiered` 2026-03-02..2026-05-01 | Official `llm_tiered` **SIGKILL/OOM** (returncode=-9) loading `dataset/feature_output/feature_output.ndjson` (2.6 GiB → ~7.3 GiB RSS) on this 15 GiB host with 0 swap. Stamp: `artifacts/openpm/oom_sigkill.json`. Not inventing `--max-bars` / universe subset. |
 | `livetradebench.live` | **pass** | official `examples/backtest_demo.py` 2025-10-01..2025-11-01 | Official 23-weekday window complete (prior 2 days 2025-10-01..02 + continue 21 days 2025-10-03..31). **n_days_completed=23 / n_days_window=23**, last_date=2025-10-31, final $1008.87, return_percentage=0.887%. Upstream has no portfolio-state resume flag; continue segment cash restarted at $1000. News 429 fail-fast (empty news, allocations still ran). Not a 1-day invention. Log: `artifacts/livetradebench/backtest_demo.log`. |
 
-Harvest / resume of official remaining work: `python scripts/v2_suite_ops.py {progress,harvest,resume}`. EnvAdapters stay in `adapters/{suite}.py`; patches and harvest live in `adapters/v2_ops/`.
+Harvest / resume of official remaining work: `python cli/optional_suite_ops.py {progress,harvest,resume}`. EnvAdapters stay in `adapters/{suite}/adapter.py`; patches and harvest live in `adapters/<bench>/ops.py`.
 
 ## Adapter wiring
 

@@ -5,9 +5,9 @@ from __future__ import annotations
 import unittest
 
 from adapters.base import ALL_SUITE_IDS
-from sandbox.benches.factory import BenchFactory
-from sandbox.harness.factory import HarnessFactory
-from sandbox.plugins.factory import PluginFactory
+from finagent.benches.factory import BenchFactory
+from finagent.harness.factory import HarnessFactory
+from finagent.plugins.factory import PluginFactory
 
 
 class FactoryStubMapTests(unittest.TestCase):
@@ -15,7 +15,7 @@ class FactoryStubMapTests(unittest.TestCase):
         self.assertEqual(list(HarnessFactory._MAP), ["grok-cli"])
         self.assertEqual(
             HarnessFactory._MAP["grok-cli"],
-            "sandbox.harness.grok_cli:GrokCliHarness",
+            "finagent.harness.grok_cli:GrokCliHarness",
         )
 
     def test_bench_map_keys_match_all_suite_ids(self) -> None:
@@ -24,7 +24,7 @@ class FactoryStubMapTests(unittest.TestCase):
 
     def test_plugin_map_registers_mcp(self) -> None:
         self.assertEqual(list(PluginFactory._MAP), ["mcp"])
-        self.assertEqual(PluginFactory._MAP["mcp"], "sandbox.plugins.mcp:McpPlugin")
+        self.assertEqual(PluginFactory._MAP["mcp"], "finagent.plugins.mcp:McpPlugin")
 
     def test_unknown_harness_lists_known_keys(self) -> None:
         with self.assertRaises(ValueError) as ctx:

@@ -14,7 +14,7 @@ This repo prefers composing upstream CLIs. It does **not** pretend every suite i
 
 ## DeepFund upstream patches
 
-`adapters/deepfund.py` patches the cloned module before `main.py` (do **not** expand these in a cleanup pass):
+`adapters/deepfund/adapter.py` patches the cloned module before `main.py` (do **not** expand these in a cleanup pass):
 
 - OpenAI-compatible `base_url` (xAI) in `llm/provider.py` — upstream `LLMConfig` rejects unknown YAML keys
 - live API key refresh in `llm/inference.py`
@@ -34,7 +34,7 @@ Open release is eval + questions + tool manifest — no agent runtime. We emit J
 
 ## Optional-suite official-protocol glue
 
-Optional EnvAdapters live in `adapters/{suite}.py` and stay **protocol → official CLI → SuiteResult**. Shared subprocess / xAI env / skip notes / text patches are in `adapters/v2_runtime.py`. Resume, harvest, and upstream monkeypatches live in `adapters/v2_ops/` so adapter bodies do not mix exam-room flow with campaign glue.
+Optional EnvAdapters live in `adapters/{suite}/adapter.py` and stay **protocol → official CLI → SuiteResult**. Shared subprocess / xAI env / skip notes / text patches are in `adapters/_ops/runtime.py`. Resume, harvest, and upstream monkeypatches live in `adapters/<bench>/ops.py` so adapter bodies do not mix exam-room flow with campaign glue.
 
 | Suite | Official entry | Glue |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ Optional EnvAdapters live in `adapters/{suite}.py` and stay **protocol → offic
 | FinMCP | `DianJin-TIR/infer` + `eval/evaluation.py` | skip unless Qieman MCP URL + schema exist |
 | InvestorBench | docker `devon warmup\|test\|eval` | skip unless docker + vLLM:8000 + Qdrant:6333 |
 
-Progress / harvest / resume of in-flight official runs: `python scripts/v2_suite_ops.py {progress,harvest,resume}`. Blockers: [`OPTIONAL_SUITE_STATUS.md`](OPTIONAL_SUITE_STATUS.md).
+Progress / harvest / resume of in-flight official runs: `python cli/optional_suite_ops.py {progress,harvest,resume}`. Blockers: [`OPTIONAL_SUITE_STATUS.md`](OPTIONAL_SUITE_STATUS.md).
 
 ## AMA harvest
 

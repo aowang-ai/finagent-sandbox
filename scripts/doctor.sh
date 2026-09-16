@@ -25,13 +25,13 @@ usage() {
 Usage: scripts/doctor.sh [--help]
 
 Checks (no network, no API keys):
-  - product skeleton (docs / adapters / schema / product scripts)
+  - product skeleton (docs / adapters / src/finagent / schema / cli)
   - does not require overnight/campaign scripts
   - required modules/<name> present with official entry files (fail if missing)
   - optional modules: warn if missing, never fail doctor
   - git remote + HEAD for each cloned module (if .git exists)
   - ACCEPTANCE_REPORT.schema.json parses
-  - adapters package imports (stdlib only), including optional-suite adapters
+  - adapters + finagent package imports (stdlib only), including optional-suite adapters
   - optional --help / py_compile smoke when cheap
 
 Exit 0 iff every structural check passed. Optional smokes are warnings.
@@ -59,57 +59,67 @@ REQUIRED_FILES=(
   LICENSE
   CONTRIBUTING.md
   .env.example
+  docs/GOAL.md
+  docs/ARCHITECTURE.md
+  docs/MODULES.md
+  docs/STATUS.md
   GOAL.md
   ARCHITECTURE.md
   MODULES.md
   STATUS.md
+  src/finagent/__init__.py
+  src/finagent/cli.py
+  src/finagent/scorecard/types.py
+  src/finagent/harness/grok.py
+  adapters/ama/yahoo.py
+  adapters/ama/http.py
   ACCEPTANCE_REPORT.schema.json
   pyproject.toml
   docs/product/POSITIONING.md
   docs/engineering/GLUE.md
   adapters/base.py
-  adapters/stockbench.py
-  adapters/ama.py
-  adapters/deepfund.py
-  adapters/fintoolbench.py
-  adapters/finsaber.py
-  adapters/investorbench.py
-  adapters/livetradebench.py
-  adapters/finmcp.py
-  adapters/vals_finance_agent.py
-  adapters/finsearchcomp.py
-  adapters/openpm.py
-  adapters/v2_runtime.py
+  adapters/stockbench/adapter.py
+  adapters/ama/adapter.py
+  adapters/deepfund/adapter.py
+  adapters/fintoolbench/adapter.py
+  adapters/finsaber/adapter.py
+  adapters/investorbench/adapter.py
+  adapters/livetradebench/adapter.py
+  adapters/finmcp/adapter.py
+  adapters/vals_finance_agent/adapter.py
+  adapters/finsearchcomp/adapter.py
+  adapters/openpm/adapter.py
+  adapters/_ops/runtime.py
   docs/engineering/OPTIONAL_SUITE_STATUS.md
   docs/paper/HARBOR_NORMS.md
   docs/paper/SANDBOX_REPO_DESIGN.md
   docs/paper/MIGRATION_PLAN.md
   scripts/doctor.sh
   scripts/clone_modules.sh
-  scripts/run_grok_cli_eval.py
-  scripts/run_eval.py
-  scripts/v2_suite_ops.py
-  sandbox/harness/base.py
-  sandbox/harness/grok_cli.py
-  sandbox/runtime/dumps.py
-  sandbox/runtime/run_suites.py
-  sandbox/benches/base.py
-  sandbox/benches/wrap.py
-  sandbox/provider/base.py
-  sandbox/provider/factory.py
-  sandbox/provider/local_process.py
-  sandbox/runtime/config.py
-  sandbox/runtime/trial.py
+  cli/run_grok_cli_eval.py
+  cli/run_eval.py
+  cli/optional_suite_ops.py
+  src/finagent/harness/base.py
+  src/finagent/harness/grok_cli.py
+  src/finagent/trial/dumps.py
+  src/finagent/trial/run_suites.py
+  src/finagent/benches/base.py
+  src/finagent/benches/wrap.py
+  src/finagent/provider/base.py
+  src/finagent/provider/factory.py
+  src/finagent/provider/local_process.py
+  src/finagent/trial/config.py
+  src/finagent/trial/trial.py
   tests/unit/test_harness_factory.py
   tests/unit/test_bench_factory.py
   tests/unit/test_local_process_sandbox.py
   tests/unit/test_trial.py
-  sandbox/plugins/base.py
-  sandbox/plugins/mcp.py
+  src/finagent/plugins/base.py
+  src/finagent/plugins/mcp.py
   tests/unit/test_plugin_factory.py
-  runners/scorecard.py
-  runners/grok.py
-  runners/protocols.py
+  src/finagent/scorecard/write.py
+  src/finagent/harness/grok.py
+  src/finagent/benches/protocols.py
   .gitignore
   modules/README.md
 )
@@ -287,45 +297,45 @@ PY
 
   COMPILE_FILES=(
     adapters/base.py
-    adapters/stockbench.py
-    adapters/ama.py
-    adapters/deepfund.py
-    adapters/fintoolbench.py
-    adapters/finsaber.py
-    adapters/investorbench.py
-    adapters/livetradebench.py
-    adapters/finmcp.py
-    adapters/vals_finance_agent.py
-    adapters/finsearchcomp.py
-    adapters/openpm.py
-    adapters/v2_runtime.py
-    adapters/v2_ops/__init__.py
-    adapters/v2_ops/finsearchcomp.py
-    adapters/v2_ops/vals_finance_agent.py
-    adapters/v2_ops/livetradebench.py
+    adapters/stockbench/adapter.py
+    adapters/ama/adapter.py
+    adapters/deepfund/adapter.py
+    adapters/fintoolbench/adapter.py
+    adapters/finsaber/adapter.py
+    adapters/investorbench/adapter.py
+    adapters/livetradebench/adapter.py
+    adapters/finmcp/adapter.py
+    adapters/vals_finance_agent/adapter.py
+    adapters/finsearchcomp/adapter.py
+    adapters/openpm/adapter.py
+    adapters/_ops/runtime.py
+    adapters/_ops/__init__.py
+    adapters/finsearchcomp/ops.py
+    adapters/vals_finance_agent/ops.py
+    adapters/livetradebench/ops.py
     adapters/__init__.py
-    sandbox/__init__.py
-    sandbox/harness/__init__.py
-    sandbox/harness/factory.py
-    sandbox/harness/base.py
-    sandbox/harness/grok_cli.py
-    sandbox/benches/__init__.py
-    sandbox/benches/factory.py
-    sandbox/benches/base.py
-    sandbox/benches/wrap.py
-    sandbox/plugins/__init__.py
-    sandbox/plugins/factory.py
-    sandbox/plugins/base.py
-    sandbox/plugins/mcp.py
-    sandbox/provider/__init__.py
-    sandbox/provider/base.py
-    sandbox/provider/factory.py
-    sandbox/provider/local_process.py
-    sandbox/runtime/__init__.py
-    sandbox/runtime/config.py
-    sandbox/runtime/dumps.py
-    sandbox/runtime/run_suites.py
-    sandbox/runtime/trial.py
+    src/finagent/__init__.py
+    src/finagent/harness/__init__.py
+    src/finagent/harness/factory.py
+    src/finagent/harness/base.py
+    src/finagent/harness/grok_cli.py
+    src/finagent/benches/__init__.py
+    src/finagent/benches/factory.py
+    src/finagent/benches/base.py
+    src/finagent/benches/wrap.py
+    src/finagent/plugins/__init__.py
+    src/finagent/plugins/factory.py
+    src/finagent/plugins/base.py
+    src/finagent/plugins/mcp.py
+    src/finagent/provider/__init__.py
+    src/finagent/provider/base.py
+    src/finagent/provider/factory.py
+    src/finagent/provider/local_process.py
+    src/finagent/trial/__init__.py
+    src/finagent/trial/config.py
+    src/finagent/trial/dumps.py
+    src/finagent/trial/run_suites.py
+    src/finagent/trial/trial.py
     tests/unit/test_factory_stubs.py
     tests/unit/test_harness_factory.py
     tests/unit/test_bench_factory.py
@@ -333,19 +343,19 @@ PY
     tests/unit/test_trial.py
     tests/unit/test_plugin_factory.py
   )
-  for extra in runners/__init__.py runners/grok.py runners/ama_http.py runners/scorecard.py runners/protocols.py scripts/run_grok_cli_eval.py scripts/run_eval.py scripts/v2_suite_ops.py; do
+  for extra in src/finagent/harness/grok.py src/finagent/scorecard/write.py src/finagent/scorecard/types.py src/finagent/benches/protocols.py adapters/ama/http.py adapters/ama/yahoo.py src/finagent/cli.py cli/run_eval.py cli/run_grok_cli_eval.py cli/optional_suite_ops.py; do
     if [[ -f "${ROOT}/${extra}" ]]; then
       COMPILE_FILES+=("${extra}")
     fi
   done
   if python3 -m py_compile "${COMPILE_FILES[@]}"
   then
-    pass "adapters/*.py (+ runners if present) compile"
+    pass "adapters + finagent compile"
   else
     fail "adapters py_compile failed"
   fi
 
-  if PYTHONPATH="${ROOT}" python3 - <<'PY'
+  if PYTHONPATH="${ROOT}/src:${ROOT}" python3 - <<'PY'
 from adapters.base import (
     ALL_SUITE_IDS,
     OPTIONAL_SUITE_IDS,
@@ -450,7 +460,7 @@ print("protocol_hash=", report.protocol_hash)
 print("parallel_scorecard_complete=", scored_report.decision)
 print("optional=", list(OPTIONAL_SUITE_IDS))
 
-from runners.scorecard import SUITE_METRIC_PREFER, _metric_summary, render_markdown
+from finagent.scorecard import SUITE_METRIC_PREFER, _metric_summary, render_markdown
 from adapters.base import Metric, compose_acceptance_report
 from adapters.fintoolbench import QUESTION_ALIASES, _resolve_questions_path
 assert set(SUITE_METRIC_PREFER) == set(ALL_SUITE_IDS)
@@ -488,16 +498,16 @@ PY
     fail "adapters import / compose smoke failed"
   fi
 
-  if PYTHONPATH="${ROOT}" python3 - <<'PY'
-import sandbox
-from sandbox.benches.factory import BenchFactory
-from sandbox.harness.factory import HarnessFactory
-from sandbox.plugins.factory import PluginFactory
-from sandbox.provider.local_process import LocalProcessSandbox
-from sandbox.runtime.trial import Trial
+  if PYTHONPATH="${ROOT}/src:${ROOT}" python3 - <<'PY'
+import finagent
+from finagent.benches.factory import BenchFactory
+from finagent.harness.factory import HarnessFactory
+from finagent.plugins.factory import PluginFactory
+from finagent.provider.local_process import LocalProcessSandbox
+from finagent.trial.trial import Trial
 from adapters.base import ALL_SUITE_IDS
 
-assert sandbox.__doc__ and "FinAgentSandbox" in sandbox.__doc__
+assert finagent.__doc__ and "FinAgentSandbox" in finagent.__doc__
 assert list(HarnessFactory._MAP) == ["grok-cli"]
 assert set(BenchFactory._MAP) == set(ALL_SUITE_IDS)
 assert len(BenchFactory._MAP) == 11
@@ -516,7 +526,7 @@ assert h.name() == "grok-cli", h.name()
 b = BenchFactory.create("finsaber.long_horizon")
 assert b.suite_id == "finsaber.long_horizon", b.suite_id
 assert hasattr(b, "run_official")
-from sandbox.benches.wrap import EnvAdapterAsBench, FinMcpEnvAdapterAsBench
+from finagent.benches.wrap import EnvAdapterAsBench, FinMcpEnvAdapterAsBench
 assert isinstance(b, EnvAdapterAsBench)
 
 try:
@@ -541,19 +551,19 @@ assert finmcp_bench.opt_in_sandbox is True
 
 assert LocalProcessSandbox.type() == "local-process"
 assert Trial is not None
-print("sandbox_factories_ok", list(HarnessFactory._MAP), h.name(), b.suite_id, len(BenchFactory._MAP))
+print("finagent_factories_ok", list(HarnessFactory._MAP), h.name(), b.suite_id, len(BenchFactory._MAP))
 PY
   then
-    pass "import sandbox + HarnessFactory.create(grok-cli) + BenchFactory wrap + McpPlugin"
+    pass "import finagent + HarnessFactory.create(grok-cli) + BenchFactory wrap + McpPlugin"
   else
-    fail "sandbox factory import failed"
+    fail "finagent factory import failed"
   fi
 
-  if PYTHONPATH="${ROOT}" python3 -m unittest tests.unit.test_factory_stubs tests.unit.test_harness_factory tests.unit.test_bench_factory tests.unit.test_local_process_sandbox tests.unit.test_trial tests.unit.test_plugin_factory -q
+  if PYTHONPATH="${ROOT}/src:${ROOT}" python3 -m unittest tests.unit.test_factory_stubs tests.unit.test_harness_factory tests.unit.test_bench_factory tests.unit.test_local_process_sandbox tests.unit.test_trial tests.unit.test_plugin_factory -q
   then
     pass "tests.unit factory/harness/bench/sandbox/trial/plugin"
   else
-    fail "sandbox unit tests failed"
+    fail "finagent unit tests failed"
   fi
 else
   fail "python3 not on PATH"
@@ -577,16 +587,16 @@ else
   warn "chmod +x scripts/doctor.sh recommended"
 fi
 
-if [[ -x "${ROOT}/scripts/run_grok_cli_eval.py" ]]; then
-  pass "run_grok_cli_eval.py is executable"
+if [[ -x "${ROOT}/cli/run_grok_cli_eval.py" ]]; then
+  pass "cli/run_grok_cli_eval.py is executable"
 else
-  warn "chmod +x scripts/run_grok_cli_eval.py recommended"
+  warn "chmod +x cli/run_grok_cli_eval.py recommended"
 fi
 
-if [[ -x "${ROOT}/scripts/run_eval.py" ]]; then
-  pass "run_eval.py is executable"
+if [[ -x "${ROOT}/cli/run_eval.py" ]]; then
+  pass "cli/run_eval.py is executable"
 else
-  warn "chmod +x scripts/run_eval.py recommended"
+  warn "chmod +x cli/run_eval.py recommended"
 fi
 
 for leftover in \
@@ -598,17 +608,21 @@ for leftover in \
   scripts/v2_continue_vals.py \
   scripts/v2_continue_livetrade.py \
   scripts/v2_continue_harvest.py \
-  scripts/v2_continue_progress.py
+  scripts/v2_continue_progress.py \
+  scripts/v2_suite_ops.py \
+  adapters/v2_runtime.py \
+  runners/grok.py \
+  sandbox/__init__.py
 do
   if [[ -e "${ROOT}/${leftover}" ]]; then
-    warn "campaign leftover still at ${leftover}; remove it (optional-suite ops live in scripts/v2_suite_ops.py)"
+    warn "campaign leftover still at ${leftover}; remove it (optional-suite ops live in cli/optional_suite_ops.py)"
   fi
 done
 
-if [[ -x "${ROOT}/scripts/v2_suite_ops.py" ]]; then
-  pass "v2_suite_ops.py is executable"
+if [[ -x "${ROOT}/cli/optional_suite_ops.py" ]]; then
+  pass "cli/optional_suite_ops.py is executable"
 else
-  warn "chmod +x scripts/v2_suite_ops.py recommended"
+  warn "chmod +x cli/optional_suite_ops.py recommended"
 fi
 
 echo

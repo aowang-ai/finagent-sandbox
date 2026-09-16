@@ -7,9 +7,9 @@ import unittest
 from pathlib import Path
 
 from adapters.base import AgentAdapter, Decision, Observation
-from sandbox.harness.base import BaseHarness
-from sandbox.runtime.config import TrialConfig
-from sandbox.runtime.trial import Trial
+from finagent.harness.base import BaseHarness
+from finagent.trial.config import TrialConfig
+from finagent.trial.trial import Trial
 
 ROOT = Path(__file__).resolve().parents[2]
 
