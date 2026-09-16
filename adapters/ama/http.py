@@ -67,7 +67,14 @@ class AmaHttpServer:
                     server.last_error = str(exc)
                     self._send(500, {"error": str(exc), "recommended_action": "HOLD", "reasoning": "server error"})
 
-        self._httpd = ThreadingHTTPServer((self.host, self.port), Handler)
+        try:
+            self._httpd = ThreadingHTTPServer((self.host, self.port), Handler)
+        except OSError as exc:
+            # Bind is glue, not protocol. Port 8765 is often taken by other workspace servers.
+            if getattr(exc, "errno", None) not in {98, 48} and "Address already in use" not in str(exc):
+                raise
+            self._httpd = ThreadingHTTPServer((self.host, 0), Handler)
+            self.port = int(self._httpd.server_address[1])
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
         self._thread.start()
         return self.url

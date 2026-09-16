@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.0.0",
+  "report_id": "5dab1e04-fe1a-4810-a66d-009439687b12",
+  "generated_at": "2026-09-16T13:18:25+00:00",
+  "agent": {
+    "agent_id": "grok-cli",
+    "name": "grok-cli",
+    "version": "overnight",
+    "extra": {}
+  },
+  "protocol_hash": "sha256:5f62ad6ea50cf7a7040e6735322f3f55433df4b4574cc064c959532869eb55c6",
+  "suites": [
+    {
+      "suite_id": "ama.multi_market_live",
+      "status": "error",
+      "protocol": {
+        "suite_id": "ama.multi_market_live",
+        "date_from": "2025-10-22",
+        "date_to": "2025-12-06",
+        "universe": [
+          "BTC",
+          "ETH",
+          "ADA",
+          "SOL",
+          "DOT",
+          "LINK",
+          "UNI",
+          "MATIC",
+          "AVAX",
+          "ATOM",
+          "TSLA",
+          "AAPL",
+          "MSFT",
+          "GOOGL",
+          "AMZN",
+          "NVDA",
+          "META",
+          "NFLX",
+          "AMD",
+          "INTC",
+          "BMRN",
+          "MRNA"
+        ],
+        "data_vintage": "ama.testbed.paper_trading+yahoo",
+        "costs": {},
+        "execution_timing": null,
+        "extra": {
+          "model": "grok-cli",
+          "agent": "GrokCli",
+          "execute": true,
+          "artifacts_dir": "/workspace/finagent-sandbox/artifacts/ama",
+          "harness_name": "grok-cli",
+          "python": "/workspace/finance-agent-p0/FINSABER/.venv/bin/python"
+        }
+      },
+      "metrics": [],
+      "gates": [],
+      "artifacts": [],
+      "traces_path": null,
+      "notes": "AMA full protocol error: [Errno 98] Address already in use",
+      "upstream_cli": "POST /trading_action/ + harvest action/*_trading_decisions.json",
+      "tier": "required"
+    }
+  ],
+  "admission": {
+    "decision": "reject",
+    "kernel": "parallel_scorecard",
+    "required_suites": [
+      "ama.multi_market_live",
+      "finsaber.long_horizon",
+      "stockbench.daily_sim",
+      "fintoolbench.tool_compliance",
+      "deepfund.fund_arena"
+    ],
+    "optional_suites": [
+      "investorbench.decision",
+      "livetradebench.live",
+      "finmcp.tool_mcp",
+      "vals_finance_agent.research",
+      "finsearchcomp.search",
+      "openpm.portfolio_pit"
+    ],
+    "rationale": "scorecard incomplete: required suite(s) errored: ama.multi_market_live"
+  },
+  "artifacts": [],
+  "signatures": [],
+  "notes": "Parallel scorecard for Grok CLI. Required benches drive completeness; optional benches skip if deps are missing. Per-suite pass/fail is not a veto. backend=api model=grok-4.20-0309-non-reasoning."
+}
