@@ -22,6 +22,6 @@ Upstream clones live here locally and are **gitignored**. This repo composes the
 | `finsearchcomp` | https://github.com/randomtutu/FinSearchComp | Time-sensitive search · `finsearchcomp.search` · optional |
 | `openpm` | https://github.com/aslcai/OpenPM-Bench | PIT portfolio + audit trail · `openpm.portfolio_pit` · optional |
 
-See `MODULES.md` at the repo root for entry CLIs, metrics, and pitfalls. Scoring is a parallel scorecard (`GOAL.md`); FINSABER is not a global gate.
+See [`docs/MODULES.md`](../docs/MODULES.md) for entry CLIs, metrics, and pitfalls. Scoring is a parallel scorecard ([`docs/GOAL.md`](../docs/GOAL.md)); FINSABER is not a global gate.
 
-Do not commit nested `modules/*/.git`, parquet dumps, or `.venv` trees. If you need a pinned commit, record it in `STATUS.md` / a lock file — do not vendor copies.
+Do not commit nested `modules/*/.git`, parquet dumps, or `.venv` trees. If you need a pinned commit, record it in [`docs/STATUS.md`](../docs/STATUS.md) / a lock file — do not vendor copies.

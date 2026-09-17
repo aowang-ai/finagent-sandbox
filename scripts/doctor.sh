@@ -22,7 +22,7 @@ fail() { FAILS=$((FAILS + 1)); printf '%s[fail]%s %s\n' "${RED}" "${RST}" "$*"; 
 
 usage() {
   cat <<'EOF'
-Usage: scripts/doctor.sh [--help]
+Usage: scripts/doctor.sh [--ci] [--help]
 
 Checks (no network, no API keys):
   - product skeleton (docs / adapters / src/finagent / schema / cli)
@@ -34,20 +34,44 @@ Checks (no network, no API keys):
   - adapters + finagent package imports (stdlib only), including optional-suite adapters
   - optional --help / py_compile smoke when cheap
 
+  --ci                 CI mode (also DOCTOR_SKIP_MODULES=1): still checks
+                       src/finagent, adapters, factories, schema; missing
+                       modules/* entry files are warnings, not failures.
+                       Full doctor locally after scripts/clone_modules.sh.
+
 Exit 0 iff every structural check passed. Optional smokes are warnings.
 EOF
 }
 
-if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  usage
-  exit 0
+CI_MODE=0
+if [[ "${DOCTOR_SKIP_MODULES:-0}" == "1" ]]; then
+  CI_MODE=1
 fi
+for arg in "$@"; do
+  case "${arg}" in
+    --help|-h)
+      usage
+      exit 0
+      ;;
+    --ci)
+      CI_MODE=1
+      ;;
+    *)
+      echo "unknown argument: ${arg}" >&2
+      usage
+      exit 2
+      ;;
+  esac
+done
 
 echo "=== finagent-sandbox doctor ==="
 echo "root: ${ROOT}"
 echo "cwd:  $(pwd)"
 echo "python: $(command -v python3 || echo missing)"
 echo "api keys: not required (doctor never reads OPENAI/POLYGON/FINNHUB/SUPABASE)"
+if [[ "${CI_MODE}" -eq 1 ]]; then
+  echo "mode: CI (missing modules/* = warn, not fail). Full doctor locally after ./scripts/clone_modules.sh"
+fi
 echo
 
 # ---------------------------------------------------------------------------
@@ -59,14 +83,12 @@ REQUIRED_FILES=(
   LICENSE
   CONTRIBUTING.md
   .env.example
+  docs/README.md
   docs/GOAL.md
   docs/ARCHITECTURE.md
   docs/MODULES.md
   docs/STATUS.md
-  GOAL.md
-  ARCHITECTURE.md
-  MODULES.md
-  STATUS.md
+  .github/workflows/ci.yml
   src/finagent/__init__.py
   src/finagent/cli.py
   src/finagent/scorecard/types.py
@@ -143,12 +165,20 @@ fi
 echo
 echo "-- modules --"
 
+req_mod_issue() {
+  if [[ "${CI_MODE}" -eq 1 ]]; then
+    warn "$@"
+  else
+    fail "$@"
+  fi
+}
+
 check_module() {
   local name="$1"
   shift
   local dir="${ROOT}/modules/${name}"
   if [[ ! -d "${dir}" ]]; then
-    fail "module missing: modules/${name}  (run scripts/clone_modules.sh)"
+    req_mod_issue "module missing: modules/${name}  (run scripts/clone_modules.sh)"
     return
   fi
   pass "module dir modules/${name}"
@@ -158,7 +188,7 @@ check_module() {
     if [[ -e "${dir}/${rel}" ]]; then
       pass "  entry ${name}/${rel}"
     else
-      fail "  missing entry ${name}/${rel}"
+      req_mod_issue "  missing entry ${name}/${rel}"
     fi
   done
 
@@ -355,7 +385,8 @@ PY
     fail "adapters py_compile failed"
   fi
 
-  if PYTHONPATH="${ROOT}/src:${ROOT}" python3 - <<'PY'
+  if PYTHONPATH="${ROOT}/src:${ROOT}" DOCTOR_CI="${CI_MODE}" python3 - <<'PY'
+import os
 from adapters.base import (
     ALL_SUITE_IDS,
     OPTIONAL_SUITE_IDS,
@@ -384,6 +415,22 @@ from adapters.vals_finance_agent import ValsFinanceAgentEnvAdapter
 from adapters.finsearchcomp import FinSearchCompEnvAdapter
 from adapters.openpm import OpenPmEnvAdapter
 
+DOCTOR_CI = os.environ.get("DOCTOR_CI") == "1"
+
+def _run_skip_path(env, agent, proto):
+    try:
+        return env.run(agent, proto)
+    except FileNotFoundError as exc:
+        if not DOCTOR_CI:
+            raise
+        print(f"ci: {env.suite_id} skip-path missing module data: {exc}")
+        return skipped_suite(
+            env.suite_id,
+            protocol=proto,
+            notes=str(exc),
+            upstream_cli="(missing module)",
+        )
+
 class Dummy:
     agent_id = "dummy-v0"
     def capabilities(self):
@@ -410,7 +457,7 @@ suites = []
 for env in envs:
     assert isinstance(env, EnvAdapter)
     proto = ProtocolSpec(suite_id=env.suite_id)
-    result = env.run(agent, proto)
+    result = _run_skip_path(env, agent, proto)
     assert isinstance(result, SuiteResult)
     assert result.status == "skip", result
     suites.append(result)
@@ -426,7 +473,7 @@ optional_envs = [
 for env in optional_envs:
     assert isinstance(env, EnvAdapter)
     proto = ProtocolSpec(suite_id=env.suite_id)
-    result = env.run(agent, proto)
+    result = _run_skip_path(env, agent, proto)
     assert isinstance(result, SuiteResult)
     assert result.status == "skip", result
     assert result.upstream_cli, env.suite_id
@@ -466,7 +513,12 @@ from adapters.fintoolbench import QUESTION_ALIASES, _resolve_questions_path
 assert set(SUITE_METRIC_PREFER) == set(ALL_SUITE_IDS)
 assert "full" in QUESTION_ALIASES
 from pathlib import Path
-_q = _resolve_questions_path(Path("."), "full")
+try:
+    _q = _resolve_questions_path(Path("."), "full")
+except FileNotFoundError:
+    if not DOCTOR_CI:
+        raise
+    _q = Path("modules/fintoolbench/data/question/select_data_real_remove_duplicates.jsonl")
 assert _q.name.endswith(".jsonl") or not _q.exists() or _q.is_file()
 ama = SuiteResult(
     suite_id="ama.multi_market_live",
@@ -661,8 +713,16 @@ fi
 echo
 echo "=== summary  pass=${PASSES}  warn=${WARNS}  fail=${FAILS} ==="
 if [[ "${FAILS}" -ne 0 ]]; then
-  echo "doctor failed. Clone modules with scripts/clone_modules.sh if they are missing."
+  if [[ "${CI_MODE}" -eq 1 ]]; then
+    echo "doctor (CI) failed. Structural checks (src/finagent, adapters, schema) must pass; missing modules are warnings."
+  else
+    echo "doctor failed. Clone modules with scripts/clone_modules.sh if they are missing."
+  fi
   exit 1
 fi
-echo "doctor ok. Parallel scorecard: skipped suites yield HOLD (incomplete), not a FINSABER veto."
+if [[ "${CI_MODE}" -eq 1 ]]; then
+  echo "doctor CI ok. Missing modules/* warned only. Full doctor locally after clone_modules.sh."
+else
+  echo "doctor ok. Parallel scorecard: skipped suites yield HOLD (incomplete), not a FINSABER veto."
+fi
 exit 0

@@ -10,7 +10,7 @@ Apache-2.0. We compose community finance benches; we do not reinvent their paper
 PYTHONPATH=src:. python -m finagent.cli --harness grok-cli --dry
 ```
 
-Doctor must stay green for structural checks. Optional clones and venvs are warnings, not failures.
+Doctor must stay green for structural checks. Optional clones and venvs are warnings, not failures. GitHub Actions / empty-modules checkout: `./scripts/doctor.sh --ci` (missing `modules/*` warns, does not fail).
 
 Copy `.env.example` → `.env` for local keys. **Never commit `.env`, PATs, OIDC blobs, or `~/.grok/auth.json`.**
 
@@ -75,13 +75,10 @@ Finance env plugins are **not** sandbox providers.
 
 ```bash
 ./scripts/doctor.sh
-PYTHONPATH=src:. python -m unittest tests.unit.test_factory_stubs \
-  tests.unit.test_harness_factory tests.unit.test_bench_factory \
-  tests.unit.test_plugin_factory tests.unit.test_local_process_sandbox \
-  tests.unit.test_trial -q
+pytest tests/unit -q
 ```
 
-If you add a registry key, extend the corresponding unit test and `scripts/doctor.sh` factory smoke. Do not require overnight/campaign scripts.
+CI is `pytest tests/unit -q` plus `./scripts/doctor.sh --ci`. If you add a registry key, extend the corresponding unit test and `scripts/doctor.sh` factory smoke. Do not require overnight/campaign scripts.
 
 ## License
 

@@ -49,7 +49,7 @@ Scoring is a **parallel scorecard**: every suite reports its own pass/fail. FINS
 | `modules/finsearchcomp` | [randomtutu/FinSearchComp](https://github.com/randomtutu/FinSearchComp) | [arXiv:2509.13160](https://arxiv.org/abs/2509.13160) | Time-sensitive search |
 | `modules/openpm` | [aslcai/OpenPM-Bench](https://github.com/aslcai/OpenPM-Bench) | (repo README) | PIT portfolio + audit trail |
 
-Clones live under `modules/` and are **gitignored**. Fetch with `./scripts/clone_modules.sh`. Per-suite CLIs, metrics, and pitfalls: [`MODULES.md`](MODULES.md). Glue we did not pretend away: [`docs/engineering/GLUE.md`](docs/engineering/GLUE.md).
+Clones live under `modules/` and are **gitignored**. Fetch with `./scripts/clone_modules.sh`. Per-suite CLIs, metrics, and pitfalls: [`docs/MODULES.md`](docs/MODULES.md). Glue we did not pretend away: [`docs/engineering/GLUE.md`](docs/engineering/GLUE.md). Index: [`docs/README.md`](docs/README.md).
 
 ## Quickstart
 
@@ -64,13 +64,15 @@ cp .env.example .env
 ./scripts/clone_modules.sh
 
 # 3. Dry "infra doctor" — no API keys, no parquet, no LLM
+#    After clone_modules.sh: ./scripts/doctor.sh
+#    Empty-modules / CI checkout: ./scripts/doctor.sh --ci  (missing modules = warn)
 ./scripts/doctor.sh
 
 # 4. Dry run through HarnessFactory (skip-path; no engines)
 PYTHONPATH=src:. python -m finagent.cli --harness grok-cli --dry
 ```
 
-Doctor checks that **required** modules exist (fail if missing), **warns** if optional clones are absent, compiles `adapters/` + `src/finagent/` factories, parses `ACCEPTANCE_REPORT.schema.json`, and runs a dummy `AgentAdapter` through the required five + optional six (dry skip). Expected admission on required stubs: **HOLD** (scorecard incomplete). A FINSABER fail does not veto other suites.
+Doctor checks that **required** modules exist (fail if missing), **warns** if optional clones are absent, compiles `adapters/` + `src/finagent/` factories, parses `ACCEPTANCE_REPORT.schema.json`, and runs a dummy `AgentAdapter` through the required five + optional six (dry skip). Expected admission on required stubs: **HOLD** (scorecard incomplete). A FINSABER fail does not veto other suites. `./scripts/doctor.sh --ci` (or `DOCTOR_SKIP_MODULES=1`) still checks src/finagent, adapters, factories, and schema, but **warns** instead of failing on missing `modules/*` — that is what GitHub Actions runs.
 
 Executed scorecards are **generated artifacts**, not vendored in this skeleton. After a real run:
 
@@ -106,7 +108,8 @@ cli/optional_suite_ops.py      optional-suite progress / harvest / resume
 scripts/clone_modules.sh       idempotent shallow clone into modules/
 scripts/doctor.sh              structural health check (no secrets)
 ACCEPTANCE_REPORT.schema.json
-docs/                          GOAL, ARCHITECTURE, MODULES, STATUS + paper/product
+docs/                          index + GOAL, ARCHITECTURE, MODULES, STATUS, paper/product
+.github/workflows/ci.yml       pytest unit + doctor --ci (no module clones)
 CONTRIBUTING.md                how to register a harness / bench / plugin
 modules/                       gitignored clones (README + .gitkeep are tracked)
 reports/                       generate scorecards here; skeleton ships .gitkeep only

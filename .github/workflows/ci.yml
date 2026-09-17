@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install package + pytest
+        run: pip install -e ".[dev]"
+
+      - name: Unit tests
+        run: pytest tests/unit -q
+
+      # Full doctor locally after ./scripts/clone_modules.sh.
+      # CI does not clone 11 upstream repos; missing modules/* is a warning.
+      - name: Doctor (CI mode)
+        run: ./scripts/doctor.sh --ci
