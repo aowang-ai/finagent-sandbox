@@ -3,7 +3,7 @@
 Repo: `aowang-ai/finagent-sandbox` only. `finance-agent-eval-infra` untouched.
 
 Author: Ao Wang `<aowang-ai@users.noreply.github.com>`.
-Commit: `947268105e33593b538dd0b7478956e71e50b194` (`9472681`).
+Commit: `4fe8d6fb01bdd189c5d212981570efedf46c0fbf` (`4fe8d6f`).
 Remote: `https://github.com/aowang-ai/finagent-sandbox.git` (no embedded PAT).
 
 ## Checklist
